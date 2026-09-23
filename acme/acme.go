@@ -17,7 +17,6 @@ import (
 
 const badNonceError = "urn:ietf:params:acme:error:badNonce"
 
-type H map[string]interface{}
 
 type Directory struct {
 	NewNonce    string `json:"newNonce"`    // url to new nonce endpoint

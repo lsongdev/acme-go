@@ -58,23 +58,12 @@ func jwsHasher(pub crypto.PublicKey) (string, crypto.Hash) {
 	return "", 0
 }
 
-// jwsEncodeJSON signs claimset using provided key and a nonce.
-// The result is serialized in JSON format containing either kid or jwk
-// fields based on the provided KeyID value.
-//
-// The claimset is marshalled using json.Marshal unless it is a string.
-// In which case it is inserted directly into the message.
-//
-// If kid is non-empty, its quoted value is inserted in the protected header
-// as "kid" field value. Otherwise, JWK is computed using jwkEncode and inserted
-// as "jwk" field value. The "jwk" and "kid" fields are mutually exclusive.
-//
-// If nonce is non-empty, its quoted value is inserted in the protected header.
-//
-// See https://tools.ietf.org/html/rfc7515#section-7.
+// jwsEncodeJSON signs rawPayload using the provided key and nonce.
+// The payload is base64url-encoded and serialized as a flattened JSON JWS.
+// The protected header contains either kid or jwk, never both.
 func jwsEncodeJSON(rawPayload []byte, key crypto.Signer, kid, nonce, url string) ([]byte, error) {
 	if key == nil {
-		return nil, errors.New("nil key")
+		return nil, errors.New("acme: account key is not configured")
 	}
 	alg, sha := jwsHasher(key.Public())
 	if alg == "" || !sha.Available() {
