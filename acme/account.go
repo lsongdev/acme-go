@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 )
@@ -20,11 +21,18 @@ type AccountResponse struct {
 		Crv string `json:"crv"`
 		X   string `json:"x"`
 		Y   string `json:"y"`
+		E   string `json:"e"`
+		N   string `json:"n"`
 	} `json:"key"`
 }
 
-func (c *Client) Register(request *AccountRequest) (string, *AccountResponse, error) {
-	headers, data, err := c.postJWK(c.Directory.NewAccount, request)
+func (c *Client) Register(ctx context.Context, request *AccountRequest) (string, *AccountResponse, error) {
+	directory, err := c.directory(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+
+	headers, data, err := c.postJWK(ctx, directory.NewAccount, request)
 	if err != nil {
 		return "", nil, err
 	}
@@ -32,6 +40,7 @@ func (c *Client) Register(request *AccountRequest) (string, *AccountResponse, er
 	if url == "" {
 		return "", nil, errors.New("acme: newAccount response missing Location header")
 	}
+
 	resp := &AccountResponse{}
 	if err := json.Unmarshal(data, resp); err != nil {
 		return "", nil, err
@@ -43,8 +52,8 @@ func (c *Client) Register(request *AccountRequest) (string, *AccountResponse, er
 	return url, resp, nil
 }
 
-func (c *Client) GetAccount(accountURL string) (*AccountResponse, error) {
-	_, data, err := c.postAsGet(accountURL)
+func (c *Client) GetAccount(ctx context.Context, accountURL string) (*AccountResponse, error) {
+	_, data, err := c.postAsGet(ctx, accountURL)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +64,7 @@ func (c *Client) GetAccount(accountURL string) (*AccountResponse, error) {
 	return resp, nil
 }
 
-func (c *Client) DeactivateAccount(accountURL string) error {
-	_, _, err := c.post(accountURL, map[string]string{"status": "deactivated"})
+func (c *Client) DeactivateAccount(ctx context.Context, accountURL string) error {
+	_, _, err := c.post(ctx, accountURL, map[string]string{"status": "deactivated"})
 	return err
 }

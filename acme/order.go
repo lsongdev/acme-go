@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 )
@@ -11,8 +12,6 @@ const OrderStatusProcessing = "processing"
 const OrderStatusValid = "valid"
 const OrderStatusInvalid = "invalid"
 
-// Identifier object used in order and authorization objects
-// See https://tools.ietf.org/html/rfc8555#section-7.1.4
 type Identifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -31,19 +30,26 @@ type OrderResponse struct {
 	Certificate    string       `json:"certificate"`
 }
 
-func (client *Client) CreateOrder(request *OrderRequest) (url string, resp *OrderResponse, err error) {
-	headers, data, err := client.post(client.Directory.NewOrder, request)
+func (c *Client) CreateOrder(ctx context.Context, request *OrderRequest) (string, *OrderResponse, error) {
+	directory, err := c.directory(ctx)
 	if err != nil {
-		return
+		return "", nil, err
 	}
-	url = headers.Get("Location")
-	resp = &OrderResponse{}
-	err = json.Unmarshal(data, &resp)
-	return
+
+	headers, data, err := c.post(ctx, directory.NewOrder, request)
+	if err != nil {
+		return "", nil, err
+	}
+	url := headers.Get("Location")
+	resp := &OrderResponse{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return "", nil, err
+	}
+	return url, resp, nil
 }
 
-func (c *Client) GetOrder(orderURL string) (*OrderResponse, error) {
-	_, data, err := c.postAsGet(orderURL)
+func (c *Client) GetOrder(ctx context.Context, orderURL string) (*OrderResponse, error) {
+	_, data, err := c.postAsGet(ctx, orderURL)
 	if err != nil {
 		return nil, err
 	}
@@ -54,16 +60,16 @@ func (c *Client) GetOrder(orderURL string) (*OrderResponse, error) {
 	return resp, nil
 }
 
-func (client *Client) FinalizeOrder(finalizeUrl string, csrDER []byte) (resp *OrderResponse, err error) {
-	finalizeReq := map[string]interface{}{
+func (c *Client) FinalizeOrder(ctx context.Context, finalizeURL string, csrDER []byte) (*OrderResponse, error) {
+	_, data, err := c.post(ctx, finalizeURL, map[string]string{
 		"csr": base64.RawURLEncoding.EncodeToString(csrDER),
-	}
-
-	_, data, err := client.post(finalizeUrl, finalizeReq)
+	})
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp = &OrderResponse{}
-	err = json.Unmarshal(data, &resp)
-	return
+	resp := &OrderResponse{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
