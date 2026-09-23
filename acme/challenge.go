@@ -22,31 +22,32 @@ type Challenge struct {
 	Validated        time.Time `json:"validated"`
 	ValidationRecord []struct {
 		HostName string `json:"hostname"`
-	}
+	} `json:"validationRecord"`
 }
 
-func (client *Client) GetChallenge(challengeUrl string) (resp *Challenge, err error) {
-	_, data, err := client.get(challengeUrl)
+func (c *Client) GetChallenge(challengeURL string) (*Challenge, error) {
+	_, data, err := c.postAsGet(challengeURL)
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp = &Challenge{}
-	err = json.Unmarshal(data, &resp)
-	return
+	resp := &Challenge{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
-func (client *Client) CompleteChallenge(challengeUrl string) (err error) {
-	_, _, err = client.post(challengeUrl, nil)
+func (c *Client) CompleteChallenge(challengeURL string) error {
+	_, _, err := c.post(challengeURL, struct{}{})
+	return err
+}
+
+func (c *Client) GetKeyAuthorization(token string) (string, error) {
+	thumbprint, err := c.GetThumbprint()
 	if err != nil {
-		return
+		return "", err
 	}
-	return
-}
-
-func (client *Client) GetKeyAuthorization(token string) (keyAuth string, err error) {
-	thumbprint, err := client.GetThumbprint()
-	keyAuth = token + "." + thumbprint
-	return
+	return token + "." + thumbprint, nil
 }
 
 type DNSRecord struct {
@@ -55,15 +56,17 @@ type DNSRecord struct {
 	Content string
 }
 
-func (client *Client) DNS01KeyAuthorization(token string) (record *DNSRecord, err error) {
-	keyAuth, err := client.GetKeyAuthorization(token)
+func (c *Client) DNS01KeyAuthorization(token string) (*DNSRecord, error) {
+	keyAuth, err := c.GetKeyAuthorization(token)
+	if err != nil {
+		return nil, err
+	}
 	hash := sha256.Sum256([]byte(keyAuth))
-	record = &DNSRecord{
+	return &DNSRecord{
 		Type:    "TXT",
 		Name:    "_acme-challenge",
 		Content: base64.RawURLEncoding.EncodeToString(hash[:]),
-	}
-	return
+	}, nil
 }
 
 type File struct {
@@ -71,11 +74,13 @@ type File struct {
 	Content  []byte
 }
 
-func (client *Client) HTTP01KeyAuthorization(token string) (file *File, err error) {
-	keyAuth, err := client.GetKeyAuthorization(token)
-	file = &File{
+func (c *Client) HTTP01KeyAuthorization(token string) (*File, error) {
+	keyAuth, err := c.GetKeyAuthorization(token)
+	if err != nil {
+		return nil, err
+	}
+	return &File{
 		Content:  []byte(keyAuth),
 		FileName: fmt.Sprintf(".well-known/acme-challenge/%s", token),
-	}
-	return
+	}, nil
 }

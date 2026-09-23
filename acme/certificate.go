@@ -12,10 +12,12 @@ type RevokeCertRequest struct {
 	Reason      int    `json:"reason"`
 }
 
-func (client *Client) GetCertificatePEM(certUrl string) (cert string, err error) {
-	_, body, err := client.get(certUrl)
-	cert = string(body)
-	return
+func (c *Client) GetCertificatePEM(certURL string) (string, error) {
+	_, body, err := c.postAsGet(certURL)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }
 
 func (client *Client) GetCertificate(certUrl string) (cert *x509.Certificate, err error) {

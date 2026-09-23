@@ -9,12 +9,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 )
 
-type H map[string]interface{}
+const badNonceError = "urn:ietf:params:acme:error:badNonce"
+
 
 type Directory struct {
 	NewNonce    string `json:"newNonce"`    // url to new nonce endpoint
@@ -38,6 +40,19 @@ type Response struct {
 	Status int    `json:"status"`
 	Type   string `json:"type"`
 	Detail string `json:"detail"`
+}
+
+func (r *Response) Error() string {
+	if r.Type == "" {
+		if r.Detail != "" {
+			return r.Detail
+		}
+		return fmt.Sprintf("acme: HTTP %d", r.Status)
+	}
+	if r.Detail == "" {
+		return r.Type
+	}
+	return fmt.Sprintf("%s: %s", r.Type, r.Detail)
 }
 
 type Config struct {
@@ -66,104 +81,176 @@ func NewClient(config *Config) (client *Client, err error) {
 	}
 	client = &Client{Config: config, AccountURL: config.AccountURL}
 	if config.AccountKey != "" {
-		err = client.ImportKey(config.AccountKey)
-		if err != nil {
-			return
+		if err = client.ImportKey(config.AccountKey); err != nil {
+			return nil, err
 		}
 	}
 	client.Directory, err = client.GetDirectory()
-	return
+	return client, err
 }
 
-func (c *Client) request(method, url string, payload []byte) (res *http.Response, err error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(payload))
+func (c *Client) request(method, url string, payload []byte) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, bytes.NewReader(payload))
 	if err != nil {
-		return
+		return nil, err
 	}
 	if method == http.MethodPost {
 		req.Header.Set("Content-Type", "application/jose+json")
 	}
-	res, err = client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return
+		return nil, err
 	}
-	c.nonce = res.Header.Get("Replay-Nonce")
-	return
+	if nonce := res.Header.Get("Replay-Nonce"); nonce != "" {
+		c.nonce = nonce
+	}
+	return res, nil
 }
 
-func (acc *Client) GenerateKey() (err error) {
-	acc.PrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	return
+func (c *Client) GenerateKey() (err error) {
+	c.PrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return err
 }
 
-func (acc *Client) ImportKey(data string) (err error) {
-	b, _ := pem.Decode([]byte(data))
-	key, err := x509.ParseECPrivateKey(b.Bytes)
-	acc.PrivateKey = key
-	return
+func (c *Client) ImportKey(data string) error {
+	block, _ := pem.Decode([]byte(data))
+	if block == nil {
+		return errors.New("acme: invalid PEM account key")
+	}
+	key, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("acme: parse account key: %w", err)
+	}
+	c.PrivateKey = key
+	return nil
 }
 
-func (acc *Client) ExportKey() (key string, err error) {
-	certKeyEnc, err := x509.MarshalECPrivateKey(acc.PrivateKey.(*ecdsa.PrivateKey))
-	data := pem.EncodeToMemory(&pem.Block{
+func (c *Client) ExportKey() (string, error) {
+	key, ok := c.PrivateKey.(*ecdsa.PrivateKey)
+	if !ok {
+		return "", ErrUnsupportedKey
+	}
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return "", err
+	}
+	return string(pem.EncodeToMemory(&pem.Block{
 		Type:  "EC PRIVATE KEY",
-		Bytes: certKeyEnc,
-	})
-	return string(data), err
+		Bytes: der,
+	})), nil
 }
 
-func (acc *Client) GetThumbprint() (thumbprint string, err error) {
-	return JWKThumbprint(acc.PrivateKey.Public())
-}
-
-func (client *Client) get(url string) (headers http.Header, body []byte, err error) {
-	res, err := client.request(http.MethodGet, url, nil)
-	if err != nil {
-		return
+func (c *Client) GetThumbprint() (string, error) {
+	if c.PrivateKey == nil {
+		return "", errors.New("acme: account key is not configured")
 	}
-	headers = res.Header
+	return JWKThumbprint(c.PrivateKey.Public())
+}
+
+func readResponse(res *http.Response) (http.Header, []byte, error) {
 	defer res.Body.Close()
-	body, err = io.ReadAll(res.Body)
-	errResp := &Response{}
-	json.Unmarshal(body, errResp)
-	if errResp.Status != 0 {
-		err = fmt.Errorf("%s: %s", errResp.Type, errResp.Detail)
-	}
-	return
-}
-
-func (client *Client) post(url string, payload interface{}) (headers http.Header, body []byte, err error) {
-	data, err := client.buildSignedRequestData(url, payload)
-	res, err := client.request(http.MethodPost, url, data)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return
+		return res.Header, nil, err
 	}
-	defer res.Body.Close()
-	headers = res.Header
-	body, err = io.ReadAll(res.Body)
-	errResp := &Response{}
-	json.Unmarshal(body, errResp)
-	if errResp.Status != 0 {
-		err = fmt.Errorf("%s: %s", errResp.Type, errResp.Detail)
+	if res.StatusCode < http.StatusBadRequest {
+		return res.Header, body, nil
 	}
-	return
+
+	problem := &Response{Status: res.StatusCode}
+	if err := json.Unmarshal(body, problem); err != nil {
+		return res.Header, body, fmt.Errorf("acme: %s", res.Status)
+	}
+	if problem.Status == 0 {
+		problem.Status = res.StatusCode
+	}
+	return res.Header, body, problem
 }
 
-func (client *Client) GetDirectory() (directory *Directory, err error) {
-	_, data, err := client.get(client.Config.DirectoryURL)
+func (c *Client) get(url string) (http.Header, []byte, error) {
+	res, err := c.request(http.MethodGet, url, nil)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
-	directory = &Directory{}
-	err = json.Unmarshal(data, directory)
-	return
+	return readResponse(res)
 }
 
-func (client *Client) getNonce() (string, error) {
-	if client.nonce != "" {
-		return client.nonce, nil
+func (c *Client) post(url string, payload interface{}) (http.Header, []byte, error) {
+	return c.postWithKID(url, payload, c.AccountURL)
+}
+
+func (c *Client) postJWK(url string, payload interface{}) (http.Header, []byte, error) {
+	return c.postWithKID(url, payload, "")
+}
+
+func (c *Client) postWithKID(url string, payload interface{}, kid string) (http.Header, []byte, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, nil, err
 	}
-	_, err := client.request(http.MethodHead, client.Directory.NewNonce, nil)
-	return client.nonce, err
+	return c.postRaw(url, body, kid)
+}
+
+func (c *Client) postAsGet(url string) (http.Header, []byte, error) {
+	return c.postRaw(url, nil, c.AccountURL)
+}
+
+func (c *Client) postRaw(url string, payload []byte, kid string) (http.Header, []byte, error) {
+	for attempt := 0; attempt < 2; attempt++ {
+		data, err := c.buildSignedRequestData(url, payload, kid)
+		if err != nil {
+			return nil, nil, err
+		}
+		res, err := c.request(http.MethodPost, url, data)
+		if err != nil {
+			return nil, nil, err
+		}
+		headers, body, err := readResponse(res)
+		if err == nil {
+			return headers, body, nil
+		}
+		var problem *Response
+		if errors.As(err, &problem) && problem.Type == badNonceError && attempt == 0 {
+			continue
+		}
+		return headers, body, err
+	}
+	return nil, nil, errors.New("acme: request failed")
+}
+
+func (c *Client) GetDirectory() (*Directory, error) {
+	_, data, err := c.get(c.Config.DirectoryURL)
+	if err != nil {
+		return nil, err
+	}
+	directory := &Directory{}
+	if err := json.Unmarshal(data, directory); err != nil {
+		return nil, err
+	}
+	return directory, nil
+}
+
+func (c *Client) getNonce() (string, error) {
+	if c.nonce != "" {
+		nonce := c.nonce
+		c.nonce = ""
+		return nonce, nil
+	}
+	if c.Directory == nil || c.Directory.NewNonce == "" {
+		return "", errors.New("acme: newNonce endpoint is not configured")
+	}
+	res, err := c.request(http.MethodHead, c.Directory.NewNonce, nil)
+	if err != nil {
+		return "", err
+	}
+	res.Body.Close()
+	if res.StatusCode >= http.StatusBadRequest {
+		return "", fmt.Errorf("acme: nonce request failed: %s", res.Status)
+	}
+	if c.nonce == "" {
+		return "", errors.New("acme: nonce response missing Replay-Nonce header")
+	}
+	nonce := c.nonce
+	c.nonce = ""
+	return nonce, nil
 }

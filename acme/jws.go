@@ -58,23 +58,12 @@ func jwsHasher(pub crypto.PublicKey) (string, crypto.Hash) {
 	return "", 0
 }
 
-// jwsEncodeJSON signs claimset using provided key and a nonce.
-// The result is serialized in JSON format containing either kid or jwk
-// fields based on the provided KeyID value.
-//
-// The claimset is marshalled using json.Marshal unless it is a string.
-// In which case it is inserted directly into the message.
-//
-// If kid is non-empty, its quoted value is inserted in the protected header
-// as "kid" field value. Otherwise, JWK is computed using jwkEncode and inserted
-// as "jwk" field value. The "jwk" and "kid" fields are mutually exclusive.
-//
-// If nonce is non-empty, its quoted value is inserted in the protected header.
-//
-// See https://tools.ietf.org/html/rfc7515#section-7.
-func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid, nonce, url string) ([]byte, error) {
+// jwsEncodeJSON signs rawPayload using the provided key and nonce.
+// The payload is base64url-encoded and serialized as a flattened JSON JWS.
+// The protected header contains either kid or jwk, never both.
+func jwsEncodeJSON(rawPayload []byte, key crypto.Signer, kid, nonce, url string) ([]byte, error) {
 	if key == nil {
-		return nil, errors.New("nil key")
+		return nil, errors.New("acme: account key is not configured")
 	}
 	alg, sha := jwsHasher(key.Public())
 	if alg == "" || !sha.Available() {
@@ -100,16 +89,7 @@ func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid, nonce, url stri
 		return nil, err
 	}
 	phead := base64.RawURLEncoding.EncodeToString([]byte(phJSON))
-	var payload string
-	if val, ok := claimset.(string); ok {
-		payload = val
-	} else {
-		cs, err := json.Marshal(claimset)
-		if err != nil {
-			return nil, err
-		}
-		payload = base64.RawURLEncoding.EncodeToString(cs)
-	}
+	payload := base64.RawURLEncoding.EncodeToString(rawPayload)
 	hash := sha.New()
 	hash.Write([]byte(phead + "." + payload))
 	sig, err := jwsSign(key, sha, hash.Sum(nil))
@@ -124,13 +104,12 @@ func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid, nonce, url stri
 	return json.Marshal(&jws)
 }
 
-func (client *Client) buildSignedRequestData(url string, payload interface{}) (out []byte, err error) {
+func (client *Client) buildSignedRequestData(url string, payload []byte, kid string) ([]byte, error) {
 	nonce, err := client.getNonce()
 	if err != nil {
-		return
+		return nil, err
 	}
-	// log.Printf("buildSignedRequestData: url=%s, kid=%s, nonce=%s, payloadType=%T", url, client.AccountURL, nonce, payload)
-	return jwsEncodeJSON(payload, client.PrivateKey, client.AccountURL, nonce, url)
+	return jwsEncodeJSON(payload, client.PrivateKey, kid, nonce, url)
 }
 
 // jwkEncode encodes public part of an RSA or ECDSA key into a JWK.
@@ -214,40 +193,3 @@ func JWKThumbprint(pub crypto.PublicKey) (string, error) {
 	b := sha256.Sum256([]byte(jwk))
 	return base64.RawURLEncoding.EncodeToString(b[:]), nil
 }
-
-// jwsWithMAC creates and signs a JWS using the given key and the HS256
-// algorithm. kid and url are included in the protected header. rawPayload
-// should not be base64-URL-encoded.
-// func jwsWithMAC(key []byte, kid, url string, rawPayload []byte) (*jsonWebSignature, error) {
-// 	if len(key) == 0 {
-// 		return nil, errors.New("acme: cannot sign JWS with an empty MAC key")
-// 	}
-// 	header := struct {
-// 		Algorithm string `json:"alg"`
-// 		KID       string `json:"kid"`
-// 		URL       string `json:"url,omitempty"`
-// 	}{
-// 		// Only HMAC-SHA256 is supported.
-// 		Algorithm: "HS256",
-// 		KID:       kid,
-// 		URL:       url,
-// 	}
-// 	rawProtected, err := json.Marshal(header)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	protected := base64.RawURLEncoding.EncodeToString(rawProtected)
-// 	payload := base64.RawURLEncoding.EncodeToString(rawPayload)
-
-// 	h := hmac.New(sha256.New, key)
-// 	if _, err := h.Write([]byte(protected + "." + payload)); err != nil {
-// 		return nil, err
-// 	}
-// 	mac := h.Sum(nil)
-
-// 	return &jsonWebSignature{
-// 		Protected: protected,
-// 		Payload:   payload,
-// 		Sig:       base64.RawURLEncoding.EncodeToString(mac),
-// 	}, nil
-// }
