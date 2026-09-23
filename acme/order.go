@@ -42,14 +42,16 @@ func (client *Client) CreateOrder(request *OrderRequest) (url string, resp *Orde
 	return
 }
 
-func (client *Client) GetOrder(orderUrl string) (resp *OrderResponse, err error) {
-	_, data, err := client.get(orderUrl)
+func (c *Client) GetOrder(orderURL string) (*OrderResponse, error) {
+	_, data, err := c.postAsGet(orderURL)
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp = &OrderResponse{}
-	err = json.Unmarshal(data, &resp)
-	return
+	resp := &OrderResponse{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (client *Client) FinalizeOrder(finalizeUrl string, csrDER []byte) (resp *OrderResponse, err error) {

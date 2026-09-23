@@ -2,6 +2,7 @@ package acme
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 type AccountRequest struct {
@@ -22,31 +23,39 @@ type AccountResponse struct {
 	} `json:"key"`
 }
 
-func (client *Client) Register(request *AccountRequest) (url string, resp *AccountResponse, err error) {
-	headers, data, err := client.post(client.Directory.NewAccount, request)
+func (c *Client) Register(request *AccountRequest) (string, *AccountResponse, error) {
+	headers, data, err := c.postJWK(c.Directory.NewAccount, request)
 	if err != nil {
-		return
+		return "", nil, err
 	}
-	url = headers.Get("Location")
-	resp = &AccountResponse{}
-	err = json.Unmarshal(data, &resp)
-	return
+	url := headers.Get("Location")
+	if url == "" {
+		return "", nil, errors.New("acme: newAccount response missing Location header")
+	}
+	resp := &AccountResponse{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return "", nil, err
+	}
+	c.AccountURL = url
+	if c.Config != nil {
+		c.Config.AccountURL = url
+	}
+	return url, resp, nil
 }
 
-func (client *Client) GetAccount(accountUrl string) (resp *AccountResponse, err error) {
-	_, data, err := client.post(accountUrl, nil)
+func (c *Client) GetAccount(accountURL string) (*AccountResponse, error) {
+	_, data, err := c.postAsGet(accountURL)
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp = &AccountResponse{}
-	err = json.Unmarshal(data, &resp)
-	return
+	resp := &AccountResponse{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
-func (client *Client) DeactivateAccount(accountUrl string) (err error) {
-	deactivateReq := map[string]interface{}{
-		"status": "deactivated",
-	}
-	client.post(accountUrl, deactivateReq)
-	return
+func (c *Client) DeactivateAccount(accountURL string) error {
+	_, _, err := c.post(accountURL, map[string]string{"status": "deactivated"})
+	return err
 }

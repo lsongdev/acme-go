@@ -12,42 +12,31 @@ type Authorization struct {
 	Challenges []Challenge `json:"challenges"`
 }
 
-func (client *Client) GetAuthorization(authorizationUrl string) (resp *Authorization, err error) {
-	_, data, err := client.get(authorizationUrl)
+func (c *Client) GetAuthorization(authorizationURL string) (*Authorization, error) {
+	_, data, err := c.postAsGet(authorizationURL)
 	if err != nil {
-		return
+		return nil, err
 	}
-	resp = &Authorization{}
-	err = json.Unmarshal(data, &resp)
-	return
+	resp := &Authorization{}
+	if err := json.Unmarshal(data, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
-func (client *Client) GetAuthorizations(authorizationUrls []string) (resp []*Authorization, err error) {
-	for _, authorizationUrl := range authorizationUrls {
-		auth, err := client.GetAuthorization(authorizationUrl)
+func (c *Client) GetAuthorizations(authorizationURLs []string) ([]*Authorization, error) {
+	resp := make([]*Authorization, 0, len(authorizationURLs))
+	for _, authorizationURL := range authorizationURLs {
+		auth, err := c.GetAuthorization(authorizationURL)
 		if err != nil {
 			return nil, err
 		}
 		resp = append(resp, auth)
 	}
-	return
+	return resp, nil
 }
 
-func (client *Client) CompleteAuthorization(authorizationUrl string) (err error) {
-	_, _, err = client.post(authorizationUrl, nil)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (client *Client) DeactivateAuthorization(authorizationUrl string) (err error) {
-	deactivateReq := map[string]interface{}{
-		"status": "deactivated",
-	}
-	_, _, err = client.post(authorizationUrl, deactivateReq)
-	if err != nil {
-		return
-	}
-	return
+func (c *Client) DeactivateAuthorization(authorizationURL string) error {
+	_, _, err := c.post(authorizationURL, map[string]string{"status": "deactivated"})
+	return err
 }
