@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -25,8 +26,8 @@ type Challenge struct {
 	} `json:"validationRecord"`
 }
 
-func (c *Client) GetChallenge(challengeURL string) (*Challenge, error) {
-	_, data, err := c.postAsGet(challengeURL)
+func (c *Client) GetChallenge(ctx context.Context, challengeURL string) (*Challenge, error) {
+	_, data, err := c.postAsGet(ctx, challengeURL)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func (c *Client) GetChallenge(challengeURL string) (*Challenge, error) {
 	return resp, nil
 }
 
-func (c *Client) CompleteChallenge(challengeURL string) error {
-	_, _, err := c.post(challengeURL, struct{}{})
+func (c *Client) CompleteChallenge(ctx context.Context, challengeURL string) error {
+	_, _, err := c.post(ctx, challengeURL, struct{}{})
 	return err
 }
 

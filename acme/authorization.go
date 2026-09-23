@@ -1,6 +1,9 @@
 package acme
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 const AuthorizationStatusPending = "pending"
 const AuthorizationStatusValid = "valid"
@@ -12,8 +15,8 @@ type Authorization struct {
 	Challenges []Challenge `json:"challenges"`
 }
 
-func (c *Client) GetAuthorization(authorizationURL string) (*Authorization, error) {
-	_, data, err := c.postAsGet(authorizationURL)
+func (c *Client) GetAuthorization(ctx context.Context, authorizationURL string) (*Authorization, error) {
+	_, data, err := c.postAsGet(ctx, authorizationURL)
 	if err != nil {
 		return nil, err
 	}
@@ -24,10 +27,10 @@ func (c *Client) GetAuthorization(authorizationURL string) (*Authorization, erro
 	return resp, nil
 }
 
-func (c *Client) GetAuthorizations(authorizationURLs []string) ([]*Authorization, error) {
+func (c *Client) GetAuthorizations(ctx context.Context, authorizationURLs []string) ([]*Authorization, error) {
 	resp := make([]*Authorization, 0, len(authorizationURLs))
 	for _, authorizationURL := range authorizationURLs {
-		auth, err := c.GetAuthorization(authorizationURL)
+		auth, err := c.GetAuthorization(ctx, authorizationURL)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +39,7 @@ func (c *Client) GetAuthorizations(authorizationURLs []string) ([]*Authorization
 	return resp, nil
 }
 
-func (c *Client) DeactivateAuthorization(authorizationURL string) error {
-	_, _, err := c.post(authorizationURL, map[string]string{"status": "deactivated"})
+func (c *Client) DeactivateAuthorization(ctx context.Context, authorizationURL string) error {
+	_, _, err := c.post(ctx, authorizationURL, map[string]string{"status": "deactivated"})
 	return err
 }
