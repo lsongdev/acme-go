@@ -104,14 +104,6 @@ func jwsEncodeJSON(rawPayload []byte, key crypto.Signer, kid, nonce, url string)
 	return json.Marshal(&jws)
 }
 
-func (client *Client) buildSignedRequestData(url string, payload []byte, kid string) ([]byte, error) {
-	nonce, err := client.getNonce()
-	if err != nil {
-		return nil, err
-	}
-	return jwsEncodeJSON(payload, client.PrivateKey, kid, nonce, url)
-}
-
 // jwkEncode encodes public part of an RSA or ECDSA key into a JWK.
 // The result is also suitable for creating a JWK thumbprint.
 // https://tools.ietf.org/html/rfc7517

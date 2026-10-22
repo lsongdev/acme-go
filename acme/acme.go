@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 )
 
 const badNonceError = "urn:ietf:params:acme:error:badNonce"
@@ -62,13 +63,17 @@ type Config struct {
 	DirectoryURL string `json:"directoryURL"`
 }
 
+// Client is safe for concurrent use once configured. Set its exported fields
+// before the first request.
 type Client struct {
 	Config     *Config
 	Directory  *Directory
 	PrivateKey crypto.Signer
 	AccountURL string
 	HTTPClient *http.Client
-	nonce      string
+
+	mu    sync.Mutex // guards nonce and Directory
+	nonce string
 }
 
 func NewDefaultConfig() *Config {
@@ -115,7 +120,9 @@ func (c *Client) request(ctx context.Context, method, url string, payload []byte
 		return nil, err
 	}
 	if nonce := res.Header.Get("Replay-Nonce"); nonce != "" {
+		c.mu.Lock()
 		c.nonce = nonce
+		c.mu.Unlock()
 	}
 	return res, nil
 }
@@ -279,21 +286,33 @@ func (c *Client) GetDirectory(ctx context.Context) (*Directory, error) {
 	if err := json.Unmarshal(data, directory); err != nil {
 		return nil, err
 	}
+	c.mu.Lock()
 	c.Directory = directory
+	c.mu.Unlock()
 	return directory, nil
 }
 
 func (c *Client) directory(ctx context.Context) (*Directory, error) {
-	if c.Directory != nil {
-		return c.Directory, nil
+	c.mu.Lock()
+	directory := c.Directory
+	c.mu.Unlock()
+	if directory != nil {
+		return directory, nil
 	}
 	return c.GetDirectory(ctx)
 }
 
+// takeNonce returns and clears the cached nonce, if any.
+func (c *Client) takeNonce() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	nonce := c.nonce
+	c.nonce = ""
+	return nonce
+}
+
 func (c *Client) getNonce(ctx context.Context) (string, error) {
-	if c.nonce != "" {
-		nonce := c.nonce
-		c.nonce = ""
+	if nonce := c.takeNonce(); nonce != "" {
 		return nonce, nil
 	}
 
@@ -313,11 +332,9 @@ func (c *Client) getNonce(ctx context.Context) (string, error) {
 	if res.StatusCode >= http.StatusBadRequest {
 		return "", fmt.Errorf("acme: nonce request failed: %s", res.Status)
 	}
-	if c.nonce == "" {
+	nonce := c.takeNonce()
+	if nonce == "" {
 		return "", errors.New("acme: nonce response missing Replay-Nonce header")
 	}
-
-	nonce := c.nonce
-	c.nonce = ""
 	return nonce, nil
 }

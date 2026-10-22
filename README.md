@@ -152,11 +152,25 @@ file, err := client.HTTP01KeyAuthorization(challenge.Token)
 // serve file.Content at file.FileName
 ```
 
-After provisioning the challenge:
+After provisioning the challenge, ask the server to validate it and wait:
 
 ```go
 err := client.CompleteChallenge(ctx, challenge.URL)
+authorization, err := client.WaitAuthorization(ctx, order.Authorizations[0])
 ```
+
+Once every authorization is valid, finalize with a CSR and wait for the
+certificate:
+
+```go
+_, err = client.FinalizeOrder(ctx, order.Finalize, csrDER)
+order, err = client.WaitOrder(ctx, orderURL)
+chain, err := client.GetCertificatePEM(ctx, order.Certificate)
+```
+
+`WaitAuthorization` and `WaitOrder` honor the server's `Retry-After` header
+and the context deadline. A `Client` is safe for concurrent use once its
+fields are set.
 
 ## Scope
 
