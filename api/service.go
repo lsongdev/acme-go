@@ -22,6 +22,13 @@ type DNSProvider interface {
 	CleanUp(ctx context.Context, fqdn, value string) error
 }
 
+// DNSScope is implemented by a DNSProvider that can publish records for
+// some names only, such as a DNS server hosting a few zones. An issuance
+// with a record outside its scope falls back to manual DNS-01.
+type DNSScope interface {
+	Covers(fqdn string) bool
+}
+
 // Options configures a Service. Zero values select the defaults.
 type Options struct {
 	// HTTPClient is used for all ACME requests.
