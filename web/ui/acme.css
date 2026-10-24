@@ -1,0 +1,23 @@
+/* ACME module styles; everything else comes from the panel shell. */
+.days { margin-left: 6px; font-size: 12px; padding: 1px 6px; border-radius: 999px; }
+.days-ok { background: var(--green-soft); color: var(--green); }
+.days-info { background: var(--primary-soft); color: var(--primary); }
+.days-warn { background: var(--amber-soft); color: var(--amber); }
+.days-error { background: var(--danger-soft); color: var(--danger); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 16px 0 0; }
+.step { padding: 3px 10px; border-radius: 999px; font-size: 12.5px; background: var(--gray-soft); color: var(--muted); }
+.step-done { background: var(--green-soft); color: var(--green); }
+.step-current { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.step-failed { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+
+.pem { margin: 0; max-height: 320px; overflow: auto; padding: 12px; border-radius: var(--radius); background: var(--surface-2); font: 12px/1.5 var(--mono); white-space: pre; }
+.card-danger { border-color: var(--danger-soft); }
+.danger-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.danger-row:first-of-type { border-top: 0; }
+.danger-row p { margin: 4px 0 0; }
+.choice { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.choice input { margin-top: 3px; }
+.choice .field-hint { display: block; }
+.error-cell { color: var(--danger); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+fieldset.field { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }

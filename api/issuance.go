@@ -144,7 +144,7 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 	if err != nil {
 		return err
 	}
-	if account.Status != "valid" {
+	if account.Status != AccountValid {
 		return fmt.Errorf("account %d is %s", account.ID, account.Status)
 	}
 

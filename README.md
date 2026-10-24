@@ -192,15 +192,23 @@ ACME_PASSWORD=... go run ./cmd/acme serve -listen :8080 -http01 :80
   API (`Service.Handler`) and HTTP-01 responses (`Service.HTTP01Handler`).
   Storage is the `api.Store` interface.
 - `store` — the SQLite `api.Store` (pure Go, no cgo).
-- `web` — the UI: Preact and htm ES modules served as-is, no build step.
-  The vendored libraries live in `web/assets/vendor`.
+- `store` tables are prefixed `acme_` and the schema version lives in
+  `acme_schema`, so the database can be shared with other modules (a
+  database from before this layout is upgraded in place).
+- `web` — assembles the service, store and UI (`web.New(ctx, db, opts)`).
+  `ACME` follows the panel module contract (`Handler`, `Assets`, a
+  `manifest.json` and a `mount(el, ctx)` entry point), so a panel can mount
+  it, and `Standalone` serves it on its own. The UI is Preact and htm ES
+  modules served as-is, with no build step, vendored in `web/ui/vendor`.
 
 HTTP-01 challenges are answered at `/.well-known/acme-challenge/` on the
 UI listener and, with `-http01`, on a separate challenge-only listener; the
 domain must resolve to this server on port 80. DNS-01 (required for wildcard
 names) shows the TXT records to publish and waits for the operator to
 continue; embedders can pass an `api.DNSProvider` to publish them
-automatically. Each issuance generates a new private key, and a failed
+automatically. A server that owns port 80 itself (such as a reverse proxy)
+can answer challenges with `Service.KeyAuthorization` and serve the issued
+certificates from `Service.TLSCertificates`. Each issuance generates a new private key, and a failed
 renewal leaves the current certificate in place. Certificates with
 auto-renewal enabled are renewed 30 days before they expire.
 
