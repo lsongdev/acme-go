@@ -54,8 +54,8 @@ function App() {
   const route = match(path);
   const section = '/' + (path.split('/')[1] || '');
   return html`
-    <div class="layout">
-      <header class="sidebar">
+    <div>
+      <header class="topbar">
         <div class="brand"><span class="brand-mark" aria-hidden="true"></span>ACME</div>
         <nav>
           ${nav.map(([to, label]) => html`
