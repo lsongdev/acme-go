@@ -13,6 +13,9 @@ type Authorization struct {
 	Expires    string      `json:"expires"`
 	Identifier Identifier  `json:"identifier"`
 	Challenges []Challenge `json:"challenges"`
+	// Wildcard is set when the authorization is for a wildcard name; the
+	// identifier then holds the name without the "*." prefix.
+	Wildcard bool `json:"wildcard"`
 }
 
 func (c *Client) GetAuthorization(ctx context.Context, authorizationURL string) (*Authorization, error) {

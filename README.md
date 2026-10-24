@@ -175,3 +175,35 @@ fields are set.
 ## Scope
 
 The package aims to stay small. It does not provision DNS records, run HTTP servers, manage certificate storage, or implement renewal scheduling. Those responsibilities can be composed around the ACME protocol client.
+
+## Certificate manager
+
+`cmd/acme` composes those responsibilities around the client: a small
+certificate manager with a JSON API and a web UI, storing everything in
+SQLite. The `acme` package itself stays dependency-free.
+
+```sh
+go run ./cmd/acme serve                       # UI on http://127.0.0.1:8080
+ACME_PASSWORD=... go run ./cmd/acme serve -listen :8080 -http01 :80
+```
+
+- `api` — `Service` manages providers, accounts, certificates and issuances
+  on top of the client, runs issuances in the background, and serves the JSON
+  API (`Service.Handler`) and HTTP-01 responses (`Service.HTTP01Handler`).
+  Storage is the `api.Store` interface.
+- `store` — the SQLite `api.Store` (pure Go, no cgo).
+- `web` — the UI: Preact and htm ES modules served as-is, no build step.
+  The vendored libraries live in `web/assets/vendor`.
+
+HTTP-01 challenges are answered at `/.well-known/acme-challenge/` on the
+UI listener and, with `-http01`, on a separate challenge-only listener; the
+domain must resolve to this server on port 80. DNS-01 (required for wildcard
+names) shows the TXT records to publish and waits for the operator to
+continue; embedders can pass an `api.DNSProvider` to publish them
+automatically. Each issuance generates a new private key, and a failed
+renewal leaves the current certificate in place. Certificates with
+auto-renewal enabled are renewed 30 days before they expire.
+
+The UI and API have no authentication unless `ACME_PASSWORD` is set (HTTP
+basic auth, user `admin`), and they hold private keys, so keep the default
+loopback address or set a password.
