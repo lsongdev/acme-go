@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lsongdev/acme-go/api"
 	"github.com/lsongdev/acme-go/store"
 	"github.com/lsongdev/acme-go/web"
 )
@@ -60,72 +58,55 @@ func run(args []string) error {
 	if err := os.MkdirAll(filepath.Dir(*dbPath), 0o700); err != nil {
 		return err
 	}
-	db, err := store.Open(ctx, *dbPath)
+	certs, err := store.Open(ctx, *dbPath)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	service, err := api.NewService(ctx, db, api.Options{RenewBefore: *renewBefore, Logger: logger})
+	defer certs.Close()
+	manager, err := web.NewWithStore(ctx, certs, web.Options{RenewBefore: *renewBefore, Logger: logger})
 	if err != nil {
 		return err
 	}
-	defer service.Close()
+	defer manager.Close()
 
-	app := http.NewServeMux()
-	app.Handle("/api/", http.StripPrefix("/api", service.Handler()))
-	app.Handle("/", web.Handler())
-	var handler http.Handler = http.NewCrossOriginProtection().Handler(app)
-	if password := os.Getenv("ACME_PASSWORD"); password != "" {
-		handler = basicAuth(handler, "admin", password)
-	} else if !isLoopback(*listen) {
+	password := os.Getenv("ACME_PASSWORD")
+	if password == "" && !isLoopback(*listen) {
 		logger.Warn("serving the UI without authentication on a non-loopback address; set ACME_PASSWORD")
 	}
-	challenges := service.HTTP01Handler()
+	// Challenges are public and answered ahead of the UI.
+	challenges := manager.Service.HTTP01Handler()
 	root := http.NewServeMux()
 	root.Handle("/.well-known/acme-challenge/", challenges)
-	root.Handle("/", handler)
+	root.Handle("/", manager.Standalone(password))
 
-	servers := []*http.Server{{Addr: *listen, Handler: root, ReadHeaderTimeout: 10 * time.Second}}
+	if *renewInterval > 0 {
+		go manager.Service.RunAutoRenew(ctx, *renewInterval)
+	}
+	logger.Info("acme listening", "ui", "http://"+*listen, "http01", *http01, "db", *dbPath)
+	errs := make(chan error, 2)
+	go func() { errs <- listenAndServe(ctx, *listen, root) }()
 	if *http01 != "" {
 		challengeOnly := http.NewServeMux()
 		challengeOnly.Handle("/.well-known/acme-challenge/", challenges)
-		servers = append(servers, &http.Server{Addr: *http01, Handler: challengeOnly, ReadHeaderTimeout: 10 * time.Second})
+		go func() { errs <- listenAndServe(ctx, *http01, challengeOnly) }()
 	}
-	errs := make(chan error, len(servers))
-	for _, server := range servers {
-		go func() { errs <- server.ListenAndServe() }()
-	}
-	logger.Info("acme listening", "ui", "http://"+*listen, "http01", *http01, "db", *dbPath)
+	// The first listener to stop (an error, or shutdown) ends the command.
+	return <-errs
+}
 
-	if *renewInterval > 0 {
-		go service.RunAutoRenew(ctx, *renewInterval)
-	}
-
+// listenAndServe serves until ctx is cancelled, then shuts down gracefully.
+func listenAndServe(ctx context.Context, addr string, handler http.Handler) error {
+	srv := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	errc := make(chan error, 1)
+	go func() { errc <- srv.ListenAndServe() }()
 	select {
-	case err = <-errs:
+	case err := <-errc:
+		return err
 	case <-ctx.Done():
 	}
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, server := range servers {
-		_ = server.Shutdown(shutdown)
-	}
-	if errors.Is(err, http.ErrServerClosed) {
-		err = nil
-	}
-	return err
-}
-
-func basicAuth(next http.Handler, user, password string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		u, p, ok := r.BasicAuth()
-		if !ok || subtle.ConstantTimeCompare([]byte(u), []byte(user)) != 1 || subtle.ConstantTimeCompare([]byte(p), []byte(password)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="acme", charset="UTF-8"`)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+	return srv.Shutdown(shutdown)
 }
 
 func isLoopback(address string) bool {
@@ -133,11 +114,8 @@ func isLoopback(address string) bool {
 	if err != nil {
 		return false
 	}
-	if host == "localhost" {
-		return true
-	}
 	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	return host == "localhost" || ip != nil && ip.IsLoopback()
 }
 
 func defaultDatabasePath() string {

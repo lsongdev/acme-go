@@ -22,6 +22,13 @@ type DNSProvider interface {
 	CleanUp(ctx context.Context, fqdn, value string) error
 }
 
+// DNSScope is implemented by a DNSProvider that can publish records for
+// some names only, such as a DNS server hosting a few zones. An issuance
+// with a record outside its scope falls back to manual DNS-01.
+type DNSScope interface {
+	Covers(fqdn string) bool
+}
+
 // Options configures a Service. Zero values select the defaults.
 type Options struct {
 	// HTTPClient is used for all ACME requests.
@@ -238,7 +245,7 @@ func (s *Service) RegisterAccount(ctx context.Context, request RegisterAccountRe
 		KeyPEM:       keyPEM,
 	}
 	if account.Status == "" {
-		account.Status = "valid"
+		account.Status = AccountValid
 	}
 	if err := s.store.CreateAccount(ctx, account); err != nil {
 		return nil, err
@@ -252,16 +259,16 @@ func (s *Service) DeactivateAccount(ctx context.Context, id int64) (*Account, er
 	if err != nil {
 		return nil, err
 	}
-	if account.Status == "deactivated" {
+	if account.Status == AccountDeactivated {
 		return account, nil
 	}
 	if err := client.DeactivateAccount(ctx, account.URL); err != nil {
 		return nil, fmt.Errorf("deactivate account: %w", err)
 	}
-	if err := s.store.UpdateAccountStatus(ctx, id, "deactivated"); err != nil {
+	if err := s.store.UpdateAccountStatus(ctx, id, AccountDeactivated); err != nil {
 		return nil, err
 	}
-	account.Status = "deactivated"
+	account.Status = AccountDeactivated
 	return account, nil
 }
 
@@ -298,7 +305,7 @@ func (s *Service) validateIssuance(ctx context.Context, accountID int64, challen
 	if err != nil {
 		return err
 	}
-	if account.Status != "valid" {
+	if account.Status != AccountValid {
 		return invalidf("account %d is %s", accountID, account.Status)
 	}
 	return nil
@@ -493,6 +500,16 @@ func (s *Service) HTTP01Handler() http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write([]byte(value))
 	})
+}
+
+// KeyAuthorization returns the key authorization for a pending HTTP-01
+// challenge token, for servers that answer challenges themselves (such as a
+// reverse proxy owning port 80) instead of mounting HTTP01Handler.
+func (s *Service) KeyAuthorization(token string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	value, ok := s.tokens[token]
+	return value, ok && token != ""
 }
 
 func (s *Service) putToken(token, value string) {

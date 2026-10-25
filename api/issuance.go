@@ -144,7 +144,7 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 	if err != nil {
 		return err
 	}
-	if account.Status != "valid" {
+	if account.Status != AccountValid {
 		return fmt.Errorf("account %d is %s", account.ID, account.Status)
 	}
 
@@ -312,7 +312,7 @@ func (s *Service) present(ctx context.Context, client *acme.Client, job *job, is
 	}
 	issuance.DNSRecords = records
 
-	if provider := s.options.DNSProvider; provider != nil {
+	if provider := s.options.DNSProvider; provider != nil && covers(provider, records) {
 		var presented []DNSRecord
 		cleanup := func() {
 			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), persistTimeout)
@@ -375,6 +375,20 @@ func (s *Service) present(ctx context.Context, client *acme.Client, job *job, is
 		}
 		message = err.Error()
 	}
+}
+
+// covers reports whether provider can publish every record.
+func covers(provider DNSProvider, records []DNSRecord) bool {
+	scope, ok := provider.(DNSScope)
+	if !ok {
+		return true
+	}
+	for _, record := range records {
+		if !scope.Covers(record.Name) {
+			return false
+		}
+	}
+	return true
 }
 
 // checkDNS reports an error unless every record is visible through at least

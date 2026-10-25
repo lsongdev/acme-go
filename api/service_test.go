@@ -28,14 +28,23 @@ type env struct {
 	service *api.Service
 	server  *httptest.Server
 
+	provider api.DNSProvider // DNS-01 provider of services the env starts
+
 	mu  sync.Mutex
 	dns map[string][]string // published TXT records
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+// newEnvWith starts the env's service with a DNS-01 provider; a function
+// builds it so the provider can publish into the env.
+func newEnvWith(t *testing.T, provider func(*env) api.DNSProvider) *env {
 	t.Helper()
 	ctx := context.Background()
 	e := &env{t: t, ca: newFakeCA(t), dns: map[string][]string{}}
+	if provider != nil {
+		e.provider = provider(e)
+	}
 	db, err := store.Open(ctx, filepath.Join(t.TempDir(), "acme.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +68,7 @@ func newEnv(t *testing.T) *env {
 
 // newService starts a service on the env's database, as after a restart.
 func (e *env) newService() {
-	service, err := api.NewService(context.Background(), e.db, api.Options{ValidationTimeout: 10 * time.Second, Logger: slog.New(slog.DiscardHandler)})
+	service, err := api.NewService(context.Background(), e.db, api.Options{ValidationTimeout: 10 * time.Second, DNSProvider: e.provider, Logger: slog.New(slog.DiscardHandler)})
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -288,6 +297,66 @@ func TestManualDNS01Wildcard(t *testing.T) {
 	e.call("GET", fmt.Sprintf("/certificates/%d", result.Certificate.ID), nil, 200, &certificate)
 	if certificate.Status != api.CertificateActive {
 		t.Fatalf("certificate = %+v", certificate)
+	}
+}
+
+// scopedProvider publishes TXT records into the env for names under zone.
+type scopedProvider struct {
+	e    *env
+	zone string
+
+	mu      sync.Mutex
+	present []string
+	cleaned []string
+}
+
+func (p *scopedProvider) Covers(fqdn string) bool {
+	return fqdn == p.zone || strings.HasSuffix(fqdn, "."+p.zone)
+}
+
+func (p *scopedProvider) Present(_ context.Context, fqdn, value string) error {
+	p.mu.Lock()
+	p.present = append(p.present, fqdn)
+	p.mu.Unlock()
+	p.e.publish(fqdn, value)
+	return nil
+}
+
+func (p *scopedProvider) CleanUp(_ context.Context, fqdn, value string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.cleaned = append(p.cleaned, fqdn)
+	return nil
+}
+
+// A provider publishes the records of the names it covers; issuances for
+// other names wait for the operator as without one.
+func TestScopedDNSProvider(t *testing.T) {
+	var provider *scopedProvider
+	e := newEnvWith(t, func(e *env) api.DNSProvider {
+		provider = &scopedProvider{e: e, zone: "example.org"}
+		return provider
+	})
+	account := e.registerAccount()
+
+	var result created
+	e.call("POST", "/certificates", api.CreateCertificateRequest{
+		Domains: []string{"*.example.org", "example.org"}, AccountID: account.ID, ChallengeType: "dns-01",
+	}, 202, &result)
+	if issuance := e.waitIssuance(result.Issuance.ID, api.IssuanceSucceeded, api.IssuanceFailed, api.IssuanceWaiting); issuance.Status != api.IssuanceSucceeded {
+		t.Fatalf("covered issuance is %s at %s: %s", issuance.Status, issuance.Step, issuance.Error)
+	}
+	provider.mu.Lock()
+	if len(provider.present) != 2 || len(provider.cleaned) != 2 {
+		t.Fatalf("presented %v, cleaned %v", provider.present, provider.cleaned)
+	}
+	provider.mu.Unlock()
+
+	e.call("POST", "/certificates", api.CreateCertificateRequest{
+		Domains: []string{"example.org", "example.net"}, AccountID: account.ID, ChallengeType: "dns-01",
+	}, 202, &result)
+	if issuance := e.waitIssuance(result.Issuance.ID, api.IssuanceSucceeded, api.IssuanceFailed, api.IssuanceWaiting); issuance.Status != api.IssuanceWaiting || issuance.Step != "awaiting-dns" {
+		t.Fatalf("partly covered issuance is %s at %s", issuance.Status, issuance.Step)
 	}
 }
 

@@ -39,6 +39,12 @@ const (
 	CertificateRevoked = "revoked"
 )
 
+// Account statuses.
+const (
+	AccountValid       = "valid"
+	AccountDeactivated = "deactivated"
+)
+
 // Issuance statuses.
 const (
 	IssuanceRunning   = "running"

@@ -1,0 +1,16 @@
+{
+  "contract": 1,
+  "id": "acme",
+  "title": "ACME",
+  "icon": "⚿",
+  "entry": "module.js",
+  "styles": ["style.css", "acme.css"],
+  "home": "/certificates",
+  "nav": [
+    { "path": "/certificates", "title": "证书", "icon": "⚿" },
+    { "path": "/issuances", "title": "签发记录", "icon": "⟳" },
+    { "path": "/accounts", "title": "账户", "icon": "◉" },
+    { "path": "/providers", "title": "服务商", "icon": "⌂" },
+    { "path": "/orders", "title": "订单", "icon": "≡" }
+  ]
+}
