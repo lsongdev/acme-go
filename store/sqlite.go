@@ -165,7 +165,12 @@ func (s *SQLite) migrate(ctx context.Context) error {
 	if version > len(migrations) {
 		return fmt.Errorf("database schema version %d is newer than this program supports (%d)", version, len(migrations))
 	}
+	var original bool
 	if version == 0 {
+		original, err = archiveOriginalSchema(ctx, tx)
+		if err != nil {
+			return err
+		}
 		var legacy int
 		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'providers'`).Scan(&legacy); err != nil {
 			return err
@@ -186,7 +191,12 @@ func (s *SQLite) migrate(ctx context.Context) error {
 			return fmt.Errorf("migration %d: %w", i+1, err)
 		}
 	}
-	if version == 0 {
+	if original {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO acme_providers (id, name, directory_url, created_at)
+SELECT id, name, directory_url, COALESCE(unixepoch(created_at), 0) FROM acme_legacy_providers`); err != nil {
+			return fmt.Errorf("import original providers: %w", err)
+		}
+	} else if version == 0 {
 		now := time.Now().Unix()
 		for _, provider := range DefaultProviders {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO acme_providers (name, directory_url, created_at) VALUES (?, ?, ?)`, provider.Name, provider.DirectoryURL, now); err != nil {
@@ -201,6 +211,40 @@ func (s *SQLite) migrate(ctx context.Context) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// The original application used prefixed tables but had no schema version.
+// Its certificate and issuance models differ from the current ones. Upgrade
+// provider-only databases automatically, retaining the old tables as backups;
+// refuse populated databases rather than silently losing certificate state.
+func archiveOriginalSchema(ctx context.Context, tx *sql.Tx) (bool, error) {
+	var original bool
+	if err := tx.QueryRowContext(ctx, `SELECT
+EXISTS(SELECT 1 FROM pragma_table_info('acme_providers') WHERE name = 'terms_of_service') AND
+EXISTS(SELECT 1 FROM pragma_table_info('acme_accounts') WHERE name = 'account_url') AND
+EXISTS(SELECT 1 FROM pragma_table_info('certificates') WHERE name = 'private_key_pem')`).Scan(&original); err != nil {
+		return false, err
+	}
+	if !original {
+		return false, nil
+	}
+	tables := []string{"acme_providers", "acme_accounts", "acme_orders", "certificates", "acme_authorizations", "acme_challenges", "acme_issuances"}
+	for _, table := range tables[1:] {
+		var count int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table).Scan(&count); err != nil {
+			return false, fmt.Errorf("inspect original database: %w", err)
+		}
+		if count > 0 {
+			return false, fmt.Errorf("original database contains records in %s; automatic upgrade supports provider-only databases; keep this database and use --db with a new path to start a separate database", table)
+		}
+	}
+	for _, table := range tables {
+		backup := "acme_legacy_" + strings.TrimPrefix(table, "acme_")
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE `+table+` RENAME TO `+backup); err != nil {
+			return false, fmt.Errorf("archive original database: %w", err)
+		}
+	}
+	return true, nil
 }
 
 // mapError translates driver errors into api errors.

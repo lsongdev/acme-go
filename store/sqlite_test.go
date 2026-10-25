@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,83 @@ import (
 //
 //go:embed testdata/legacy.sql
 var legacySchema string
+
+//go:embed testdata/original.sql
+var originalSchema string
+
+func TestUpgradesOriginalProviderOnlyDatabase(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "acme.db")
+	db, err := sql.Open("sqlite", path+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, stmt := range []string{
+		originalSchema,
+		`INSERT INTO acme_providers (id, name, directory_url, created_at) VALUES (42, 'My CA', 'https://ca.example/dir', '2026-10-25 08:00:00')`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for range 2 {
+		s, err := Open(ctx, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		providers, err := s.ListProviders(ctx)
+		s.Close()
+		if err != nil || len(providers) != 1 {
+			t.Fatalf("providers = %+v, %v", providers, err)
+		}
+		p := providers[0]
+		if p.ID != 42 || p.Name != "My CA" || p.DirectoryURL != "https://ca.example/dir" || p.CreatedAt.UTC().Format("2006-01-02 15:04:05") != "2026-10-25 08:00:00" {
+			t.Fatalf("provider changed: %+v", p)
+		}
+	}
+	var backups, version int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name GLOB 'acme_legacy_*'`).Scan(&backups); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT version FROM acme_schema`).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if backups != 7 || version != len(migrations) {
+		t.Fatalf("backups = %d, version = %d", backups, version)
+	}
+	var name string
+	if err := db.QueryRow(`SELECT name FROM acme_legacy_providers WHERE id = 42`).Scan(&name); err != nil || name != "My CA" {
+		t.Fatalf("archived provider = %q, %v", name, err)
+	}
+}
+
+func TestOriginalDatabaseWithRecordsIsUnchanged(t *testing.T) {
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "acme.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, stmt := range []string{
+		originalSchema,
+		`INSERT INTO certificates (domains, csr_pem, private_key_pem) VALUES ('example.com', 'csr', 'key')`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := New(context.Background(), db); err == nil || !strings.Contains(err.Error(), "original database contains records in certificates") {
+		t.Fatalf("upgrade error = %v", err)
+	}
+	var key string
+	if err := db.QueryRow(`SELECT private_key_pem FROM certificates`).Scan(&key); err != nil || key != "key" {
+		t.Fatalf("original certificate key = %q, %v", key, err)
+	}
+	var changed int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name = 'acme_schema' OR name GLOB 'acme_legacy_*'`).Scan(&changed); err != nil || changed != 0 {
+		t.Fatalf("migration left %d objects, %v", changed, err)
+	}
+}
 
 func TestUpgradesUnprefixedDatabase(t *testing.T) {
 	ctx := context.Background()
