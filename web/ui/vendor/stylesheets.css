@@ -605,8 +605,8 @@ a.button {
 }
 
 /*
- * A table that scrolls sideways instead of squeezing its columns: cells keep
- * to one line. Add .table-framed for a border, background and shadow when
+ * A table that scrolls sideways instead of squeezing its columns: cells, and
+ * any flex rows inside them, keep to one line. Add .table-framed for a border, background and shadow when
  * the table stands on its own rather than inside a card.
  *
  * <div class="table-scroll table-framed"><table class="table">…</table></div>
@@ -625,6 +625,11 @@ a.button {
 
 .table-scroll > .table :is(th, td) {
   white-space: nowrap;
+}
+
+/* Rows of buttons or tags in a cell stay on one line too. */
+.table-scroll > .table :is(th, td) * {
+  flex-wrap: nowrap;
 }
 
 .table-framed {
