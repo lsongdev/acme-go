@@ -20,20 +20,20 @@ export function Link({ to, children, ...props }) {
 
 const STATUS = {
   // certificates
-  pending: ['签发中', 'blue'],
-  active: ['有效', 'green'],
-  failed: ['失败', 'red'],
-  revoked: ['已吊销', 'gray'],
+  pending: ['Issuing', 'blue'],
+  active: ['Active', 'green'],
+  failed: ['Failed', 'red'],
+  revoked: ['Revoked', 'gray'],
   // issuances
-  running: ['进行中', 'blue'],
-  waiting: ['等待操作', 'amber'],
-  succeeded: ['成功', 'green'],
+  running: ['Running', 'blue'],
+  waiting: ['Needs action', 'amber'],
+  succeeded: ['Succeeded', 'green'],
   // accounts and orders
-  valid: ['有效', 'green'],
-  deactivated: ['已停用', 'gray'],
-  ready: ['待签发', 'blue'],
-  processing: ['处理中', 'blue'],
-  invalid: ['无效', 'red'],
+  valid: ['Valid', 'green'],
+  deactivated: ['Deactivated', 'gray'],
+  ready: ['Ready', 'blue'],
+  processing: ['Processing', 'blue'],
+  invalid: ['Invalid', 'red'],
 };
 
 export function Status({ status }) {
@@ -42,16 +42,16 @@ export function Status({ status }) {
 }
 
 export const STEPS = [
-  ['queued', '排队'],
-  ['creating-order', '创建订单'],
-  ['authorizing', '获取授权'],
-  ['publishing-dns', '发布 DNS 记录'],
-  ['awaiting-dns', '等待添加 DNS 记录'],
-  ['checking-dns', '检查 DNS 记录'],
-  ['validating', 'CA 验证'],
-  ['finalizing', '提交 CSR'],
-  ['downloading', '下载证书'],
-  ['done', '完成'],
+  ['queued', 'Queued'],
+  ['creating-order', 'Creating the order'],
+  ['authorizing', 'Authorizing'],
+  ['publishing-dns', 'Publishing DNS records'],
+  ['awaiting-dns', 'Waiting for DNS records'],
+  ['checking-dns', 'Checking DNS records'],
+  ['validating', 'CA validating'],
+  ['finalizing', 'Submitting the CSR'],
+  ['downloading', 'Downloading'],
+  ['done', 'Done'],
 ];
 
 export const stepLabel = step => STEPS.find(([key]) => key === step)?.[1] || step;
@@ -78,7 +78,7 @@ export function Expiry({ value }) {
   const days = daysUntil(value);
   if (days === null) return html`<span class="muted">—</span>`;
   const tone = days < 0 ? 'error' : days <= 14 ? 'warn' : days <= 30 ? 'info' : 'ok';
-  const text = days < 0 ? `已过期 ${-days} 天` : `剩余 ${days} 天`;
+  const text = days < 0 ? `expired ${-days} days ago` : `${days} days left`;
   return html`<span>${formatDate(value)} <span class=${`days days-${tone}`}>${text}</span></span>`;
 }
 
