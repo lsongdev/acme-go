@@ -103,14 +103,16 @@ a.card { color: inherit; display: block; }
 
 /* Buttons */
 .button { gap: 6px; }
-.icon-button { width: 32px; padding-left: 0; padding-right: 0; }
+.icon-button { aspect-ratio: 1; padding-left: 0; padding-right: 0; } /* square, as tall as the controls */
 .button-row { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 
 /* Forms */
 form.form { display: grid; gap: 16px; }
 .form-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
-.input { font-family: inherit; }
-textarea.input { min-height: 90px; resize: vertical; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+/* Fields keep the control size (16px) even in monospace: smaller text
+   makes iOS zoom into a focused field. */
+.input.mono { font-size: var(--input-font-size); }
+textarea.input { min-height: 90px; resize: vertical; font-family: var(--mono); line-height: 1.5; }
 textarea.code { min-height: 380px; tab-size: 2; white-space: pre; }
 .form-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }

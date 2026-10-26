@@ -24,6 +24,12 @@
   --duration-fast: 0.2s;
   --ease-standard: ease;
   --focus-ring-width: 3px;
+  /* Form controls (buttons, inputs, selects) share these so they line up.
+     16px text also keeps iOS from zooming into a focused field. */
+  --control-font-size: 16px;
+  --control-line-height: 1.25;
+  --control-padding-y: 7px;
+  --control-padding-x: 12px;
   /* colors */
   --color-canvas: #f6f7f9;
   --color-surface: #ffffff;
@@ -44,6 +50,17 @@
   --color-on-success: #ffffff;
   --color-on-danger: #ffffff;
   --shadow-color: 16 24 40;
+}
+
+/* With a mouse or trackpad, controls can be denser. iOS is left out even
+   then (an iPad with a trackpad reports a fine pointer) because it zooms
+   into fields under 16px; -webkit-touch-callout exists only there. */
+@supports not (-webkit-touch-callout: none) {
+  @media (pointer: fine) {
+    :where(:root) {
+      --control-font-size: 14px;
+    }
+  }
 }
 
 /* Preserve the native hidden contract when a component sets display. */
@@ -95,8 +112,9 @@
 /* input.css */
 :root {
   /* Input */
-  --input-padding: 8px;
-  --input-font-size: 1em;
+  --input-padding: var(--control-padding-y) var(--control-padding-x);
+  --input-font-size: var(--control-font-size);
+  --input-line-height: var(--control-line-height);
   --input-border-width: var(--border-width);
   --input-border-radius: var(--radius-sm);
   --input-transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
@@ -115,9 +133,17 @@
   background: var(--input-bg, var(--color-surface));
   padding: var(--input-padding);
   font-size: var(--input-font-size);
+  font-family: inherit;
+  line-height: var(--input-line-height);
   transition: var(--input-transition);
   border: var(--input-border-width) solid var(--input-border-color, var(--color-border));
   border-radius: var(--input-border-radius);
+}
+
+/* A native select sizes its own box from font metrics; pin it to the
+   height the other controls get from their padding. */
+select.input {
+  height: calc(var(--input-font-size) * var(--input-line-height) + 2 * var(--control-padding-y) + 2 * var(--input-border-width));
 }
 
 .input[type="range"] {
@@ -162,19 +188,19 @@
 }
 
 .input-small {
-  font-size: calc(var(--input-font-size) * 0.75);
-  padding: calc(var(--input-padding) * 0.75);
+  /* Smaller by padding only: text under 16px makes iOS zoom in. */
+  padding: calc(var(--control-padding-y) * 0.65) calc(var(--control-padding-x) * 0.75);
 }
 
 .input-large {
-  font-size: calc(var(--input-font-size) * 1.125);
-  padding: calc(var(--input-padding) * 1.25);
+  font-size: calc(var(--input-font-size) * 1.15);
+  padding: calc(var(--control-padding-y) * 1.15) calc(var(--control-padding-x) * 1.15);
 }
 
 .input-addon {
   display: flex;
   align-items: center;
-  padding: 0 var(--input-padding);
+  padding: 0 var(--control-padding-x);
   font-size: var(--input-font-size);
   color: var(--input-addon-text, var(--color-text-muted));
   background: var(--input-addon-bg, var(--color-surface-subtle));
@@ -237,12 +263,12 @@
    ============================================ */
 :root {
   /* Button */
-  --button-font-size: 14px;
+  --button-font-size: var(--control-font-size);
   --button-font-family: var(--font-family);
   --button-font-weight: 500;
-  --button-line-height: 1.43;
-  --button-padding-y: 5px;
-  --button-padding-x: 12px;
+  --button-line-height: var(--control-line-height);
+  --button-padding-y: var(--control-padding-y);
+  --button-padding-x: var(--control-padding-x);
   --button-border-width: var(--border-width);
   --button-border-radius: var(--radius-sm);
   --button-transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
