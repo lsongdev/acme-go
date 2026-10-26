@@ -7,8 +7,8 @@ Served as-is so the module works offline and needs no build step.
 | preact.mjs | preact       | 11.0.2  | https://cdn.jsdelivr.net/npm/preact@11.0.2/dist/preact.mjs |
 | hooks.mjs  | preact/hooks | 11.0.2  | https://cdn.jsdelivr.net/npm/preact@11.0.2/hooks/dist/hooks.mjs |
 | htm.mjs    | htm          | 3.1.1   | https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.module.js |
-| stylesheets.css | @lsongdev/stylesheets | unreleased | https://github.com/lsongdev/stylesheets (branch `components`) |
-| scripts/ | @lsongdev/scripts | unreleased | https://github.com/lsongdev/scripts (branch `components`) |
+| stylesheets.css | @lsongdev/stylesheets | 1.1.0 | https://cdn.jsdelivr.net/npm/@lsongdev/stylesheets@1.1.0/ |
+| scripts/ | @lsongdev/scripts | 0.1.0-rc.2 | https://cdn.jsdelivr.net/npm/@lsongdev/scripts@0.1.0-rc.2/ |
 
 Local modification: `hooks.mjs` imports `./preact.mjs` instead of the bare
 specifier `preact`, so no import map is needed.
