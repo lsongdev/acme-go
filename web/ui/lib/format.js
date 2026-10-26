@@ -10,7 +10,7 @@ export function percent(n) {
   return n == null ? '—' : `${n.toFixed(n < 10 ? 1 : 0)}%`;
 }
 
-const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' });
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 
 // ago formats a date (Date, ISO string or unix seconds) relative to now.
 export function ago(value) {
@@ -25,9 +25,12 @@ export function ago(value) {
   return '—';
 }
 
+const pad = n => String(n).padStart(2, '0');
+
+// datetime formats a date as local "2006-01-02 15:04:05".
 export function datetime(value) {
-  const date = toDate(value);
-  return date ? date.toLocaleString('zh-CN', { hour12: false }) : '—';
+  const d = toDate(value);
+  return d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` : '—';
 }
 
 function toDate(value) {

@@ -1,7 +1,6 @@
 // HTTP client for a module's API. The shell creates one per module with the
 // module's base path, so module code only ever uses relative paths.
 
-import { t } from './i18n.js';
 
 export class ApiError extends Error {
   constructor(status, { code = 'error', message = 'Request failed', fields } = {}) {
@@ -39,7 +38,7 @@ export function createClient(base, { envelope = true } = {}) {
       response = await fetch(url(path, query), init);
     } catch (err) {
       if (err.name === 'AbortError') throw err;
-      throw new ApiError(0, { code: 'network', message: t('network') });
+      throw new ApiError(0, { code: 'network', message: 'Cannot reach the server' });
     }
     if (response.status === 401) dispatchEvent(new Event('panel:unauthorized'));
     const payload = response.status === 204 ? null : await response.json().catch(() => null);

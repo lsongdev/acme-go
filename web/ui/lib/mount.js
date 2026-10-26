@@ -6,7 +6,6 @@ import { html, render, useEffect, useState } from './html.js';
 import { createClient } from './client.js';
 import { PanelContext } from './panel.js';
 import { DialogHost, Toaster, Notice, Loading } from './ui.js';
-import { setLang, t } from './i18n.js';
 
 // compile turns "/containers/:id" into a matcher that returns params.
 function compile(pattern) {
@@ -57,20 +56,19 @@ export function createMount({ routes, api: wrap, envelope = true }) {
       setQuery: patch => ctx.navigate(ctx.path + search({ ...ctx.query, ...patch }), { replace: true }),
     };
     return html`<div class="module-root">
-      ${match ? html`<${Lazy} key=${match.route.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Notice}>${t('notFound')}<//>`}
+      ${match ? html`<${Lazy} key=${match.route.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Notice}>Page not found<//>`}
       <${DialogHost} />
       <${Toaster} />
     </div>`;
   }
 
   return function mount(el, ctx) {
-    setLang(ctx.lang);
     const client = createClient(ctx.apiBase, { envelope });
     const api = wrap ? wrap(client) : client;
     const draw = c => render(html`<${App} ctx=${c} api=${api} client=${client} />`, el);
     draw(ctx);
     return {
-      update(next) { setLang(next.lang); draw(next); },
+      update(next) { draw(next); },
       unmount() { render(null, el); },
     };
   };
