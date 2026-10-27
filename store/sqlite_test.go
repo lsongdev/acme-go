@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lsongdev/acme-go/api"
 )
 
 // legacySchema is the schema before tables were prefixed for sharing a
@@ -157,5 +159,30 @@ func TestSharesADatabase(t *testing.T) {
 	}
 	if err := db.Ping(); err != nil {
 		t.Fatalf("shared database closed: %v", err)
+	}
+}
+
+func TestReusedOrderURL(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "acme.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	account := &api.Account{ProviderID: 1, URL: "https://ca.example/acct/1", Status: "valid", KeyPEM: "key"}
+	if err := s.CreateAccount(ctx, account); err != nil {
+		t.Fatal(err)
+	}
+	first := &api.Order{AccountID: account.ID, URL: "https://ca.example/order/1", Domains: []string{"a.example"}, Status: "pending"}
+	if err := s.CreateOrder(ctx, first); err != nil {
+		t.Fatal(err)
+	}
+	retry := &api.Order{AccountID: account.ID, URL: first.URL, Domains: first.Domains, Status: "ready"}
+	if err := s.CreateOrder(ctx, retry); err != nil {
+		t.Fatalf("recording a reused order: %v", err)
+	}
+	orders, _ := s.ListOrders(ctx)
+	if retry.ID != first.ID || len(orders) != 1 || orders[0].Status != "ready" {
+		t.Fatalf("ids %d/%d, orders %+v", first.ID, retry.ID, orders)
 	}
 }

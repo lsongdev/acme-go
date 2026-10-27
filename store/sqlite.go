@@ -550,13 +550,19 @@ func (s *SQLite) CreateOrder(ctx context.Context, o *api.Order) error {
 	if o.IssuanceID > 0 {
 		issuanceID = o.IssuanceID
 	}
-	result, err := s.db.ExecContext(ctx, `INSERT INTO acme_orders (account_id, issuance_id, url, domains, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		o.AccountID, issuanceID, o.URL, joinDomains(o.Domains), o.Status, unix(now), unix(now))
+	// A CA may hand back an unfinished order it already gave the account for
+	// the same names (Let's Encrypt does after a failed attempt): the retry
+	// takes that order over.
+	var created int64
+	err := s.db.QueryRowContext(ctx, `INSERT INTO acme_orders (account_id, issuance_id, url, domains, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT (url) DO UPDATE SET issuance_id = excluded.issuance_id, status = excluded.status, updated_at = excluded.updated_at
+		RETURNING id, created_at`,
+		o.AccountID, issuanceID, o.URL, joinDomains(o.Domains), o.Status, unix(now), unix(now)).Scan(&o.ID, &created)
 	if err != nil {
 		return mapError(err, "order")
 	}
-	o.ID, err = result.LastInsertId()
-	return err
+	o.CreatedAt = time.Unix(created, 0).UTC()
+	return nil
 }
 
 func (s *SQLite) UpdateOrderStatus(ctx context.Context, id int64, status string) error {
