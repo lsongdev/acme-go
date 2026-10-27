@@ -1,6 +1,6 @@
 /* Module layout. Components and the theme come from @lsongdev/stylesheets
-   (vendor/stylesheets.css). Its custom properties are defined on the
-   document: by vendor/stylesheets.css when the module runs on its own, or
+   (stylesheets.css). Its custom properties are defined on the
+   document: by stylesheets.css when the module runs on its own, or
    by whichever page hosts it, from where they inherit into a shadow root.
    The short names below are this module's aliases for them. */
 :root, :host {

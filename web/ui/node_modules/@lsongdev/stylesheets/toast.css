@@ -1,0 +1,43 @@
+@import url(./base.css);
+
+/*
+ * Short messages stacked in a corner. The container may be a manual
+ * popover so it shows above modal dialogs.
+ * Opt-in: not part of index.css.
+ *
+ * <div class="toasts" popover="manual" aria-live="polite">
+ *   <div class="toast toast-success">Saved</div>
+ * </div>
+ */
+.toasts {
+  position: fixed;
+  inset: auto var(--toasts-offset, 16px) var(--toasts-offset, 16px) auto;
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 2 * var(--toasts-offset, 16px)));
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  border: 0;
+}
+
+.toast {
+  padding: 10px 14px;
+  overflow-wrap: anywhere;
+  color: var(--toast-text, var(--color-canvas));
+  background: var(--toast-bg, var(--color-text));
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.toast-danger {
+  --toast-bg: var(--color-danger);
+  --toast-text: var(--color-on-danger);
+}
+
+.toast-success {
+  --toast-bg: var(--color-success);
+  --toast-text: var(--color-on-success);
+}

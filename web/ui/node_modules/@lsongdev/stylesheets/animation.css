@@ -1,0 +1,15 @@
+@import url(./color.css);
+
+@keyframes breathing {
+  0% {
+    box-shadow: 0 0 10px 3px var(--box-shadow-color, var(--color-black-op1, #eee));
+  }
+
+  50% {
+    box-shadow: 0 0 20px 5px var(--box-shadow-color,  var(--color-black-op1, #eee));
+  }
+
+  100% {
+    box-shadow: 0 0 10px 3px var(--box-shadow-color,  var(--color-black-op1, #eee));
+  }
+}

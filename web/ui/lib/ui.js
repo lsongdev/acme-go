@@ -1,14 +1,14 @@
 // UI building blocks for the pages: the @lsongdev/scripts components (in
-// vendor/scripts), under the names and tone vocabulary the pages use.
+// @lsongdev/scripts), under the names and tone vocabulary the pages use.
 import { html } from './html.js';
 import {
   Alert, Badge as ScriptsBadge, Dialog, Loading, Empty, PageHeader, KeyValue, toast as show,
-} from '../vendor/scripts/react/components/index.js';
+} from '../node_modules/@lsongdev/scripts/react/components/index.js';
 
 export {
   Loading, Empty, Field, Check, ListInput, Tabs, LogView, CopyButton, ConfirmButton,
   Toaster, openDialog, DialogHost, Table,
-} from '../vendor/scripts/react/components/index.js';
+} from '../node_modules/@lsongdev/scripts/react/components/index.js';
 export { KeyValue as KV };
 
 export function Page({ title, subtitle, actions, children }) {

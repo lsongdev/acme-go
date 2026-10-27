@@ -1,0 +1,41 @@
+@import url(./base.css);
+
+/*
+ * A row of tabs over a bottom rule. Mark the current tab with
+ * aria-selected="true" (or .active).
+ * Opt-in: not part of index.css.
+ *
+ * <nav class="tabs" role="tablist">
+ *   <button class="tab" role="tab" aria-selected="true">Logs</button>
+ *   <button class="tab" role="tab" aria-selected="false">Stats</button>
+ * </nav>
+ */
+.tabs {
+  display: flex;
+  gap: var(--tabs-gap, 4px);
+  margin-bottom: var(--tabs-margin-bottom, 16px);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--tabs-border, var(--color-border));
+}
+
+.tab {
+  padding: var(--tab-padding, 8px 12px);
+  font: inherit;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tab[aria-selected="true"],
+.tab.active {
+  color: var(--tab-active-text, var(--color-primary));
+  border-bottom-color: var(--tab-active-border, var(--color-primary));
+}

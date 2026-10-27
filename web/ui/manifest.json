@@ -4,7 +4,7 @@
   "title": "ACME",
   "icon": "⚿",
   "entry": "module.js",
-  "styles": ["vendor/stylesheets.css", "style.css", "acme.css"],
+  "styles": ["stylesheets.css", "style.css", "acme.css"],
   "home": "/certificates",
   "nav": [
     { "path": "/certificates", "title": "Certificates", "icon": "⚿" },

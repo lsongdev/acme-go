@@ -1,0 +1,34 @@
+@import url(./base.css);
+
+/*
+ * Label and value pairs in two columns, stacked on narrow screens.
+ * Opt-in: not part of index.css.
+ *
+ * <dl class="key-value"><dt>Image</dt><dd>nginx:1.27</dd></dl>
+ */
+.key-value {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--key-value-gap, 8px 20px);
+  margin: 0;
+}
+
+.key-value dt {
+  color: var(--color-text-muted);
+}
+
+.key-value dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .key-value {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .key-value dd {
+    margin-bottom: 8px;
+  }
+}

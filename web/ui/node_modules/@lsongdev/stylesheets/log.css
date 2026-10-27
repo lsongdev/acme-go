@@ -1,0 +1,26 @@
+@import url(./base.css);
+
+/*
+ * A dark, scrolling block of program output. Mark standard error lines
+ * with .log-stderr.
+ * Opt-in: not part of index.css.
+ *
+ * <pre class="log">starting…
+ * <span class="log-stderr">warning: …</span></pre>
+ */
+.log {
+  height: var(--log-height, 440px);
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--log-text, #d6dde6);
+  background: var(--log-bg, #0f1419);
+  border-radius: var(--radius-md);
+}
+
+.log-stderr {
+  color: var(--log-stderr-text, #ff9b9b);
+}

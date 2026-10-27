@@ -1,0 +1,23 @@
+@import url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css);
+
+.icon {
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+  background-color: transparent;
+  background-image: var(--svg);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.icon-carbon-edit-off {
+  --svg: url('https://api.iconify.design/carbon/edit-off.svg');
+}
+
+.icon-carbon-humidity {
+  --svg: url('https://api.iconify.design/carbon/humidity.svg');
+}
+
+.icon-fluent-emoji-flat-alarm-clock {
+  --svg: url('https://api.iconify.design/fluent-emoji-flat/alarm-clock.svg');
+}

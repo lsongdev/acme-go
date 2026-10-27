@@ -1,0 +1,44 @@
+@import url(./base.css);
+
+/*
+ * The heading row of a page: title and subtitle on the left, actions on
+ * the right, wrapping on narrow screens.
+ * Opt-in: not part of index.css.
+ *
+ * <header class="page-header">
+ *   <div class="page-title"><h1>Containers</h1><div class="page-subtitle">12 running</div></div>
+ *   <div class="page-actions"><button class="button button-primary">New</button></div>
+ * </header>
+ */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: var(--page-header-margin-bottom, 18px);
+}
+
+.page-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title h1 {
+  margin: 0;
+  font-size: var(--page-title-font-size, 20px);
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.page-subtitle {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
