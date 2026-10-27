@@ -26,16 +26,14 @@ type Store interface {
 	UpdateCertificate(ctx context.Context, certificate *Certificate) error
 	DeleteCertificate(ctx context.Context, id int64) error
 
+	// ListIssuances returns newest first; certificateID=0 selects all.
 	ListIssuances(ctx context.Context, certificateID int64) ([]Issuance, error)
 	GetIssuance(ctx context.Context, id int64) (*Issuance, error)
 	// CreateIssuance fails with ErrConflict if the certificate already has an
 	// unfinished issuance.
 	CreateIssuance(ctx context.Context, issuance *Issuance) error
-	// UpdateIssuance saves status, step, error and DNS records.
+	// UpdateIssuance saves progress, retry state and the retained key and CSR.
 	UpdateIssuance(ctx context.Context, issuance *Issuance) error
-	// FailUnfinishedIssuances marks issuances left running by a previous
-	// process as failed and returns how many were affected.
-	FailUnfinishedIssuances(ctx context.Context, reason string) (int64, error)
 
 	ListOrders(ctx context.Context) ([]Order, error)
 	CreateOrder(ctx context.Context, order *Order) error

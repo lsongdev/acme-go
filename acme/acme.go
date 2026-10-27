@@ -13,8 +13,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const badNonceError = "urn:ietf:params:acme:error:badNonce"
@@ -37,9 +39,10 @@ type Directory struct {
 }
 
 type Response struct {
-	Status int    `json:"status"`
-	Type   string `json:"type"`
-	Detail string `json:"detail"`
+	Status  int       `json:"status"`
+	Type    string    `json:"type"`
+	Detail  string    `json:"detail"`
+	RetryAt time.Time `json:"-"`
 }
 
 func (r *Response) Error() string {
@@ -66,11 +69,13 @@ type Config struct {
 // Client is safe for concurrent use once configured. Set its exported fields
 // before the first request.
 type Client struct {
-	Config     *Config
-	Directory  *Directory
-	PrivateKey crypto.Signer
-	AccountURL string
-	HTTPClient *http.Client
+	Config      *Config
+	Directory   *Directory
+	PrivateKey  crypto.Signer
+	AccountURL  string
+	HTTPClient  *http.Client
+	RetryPolicy RetryPolicy
+	Logger      *slog.Logger
 
 	mu    sync.Mutex // guards nonce and Directory
 	nonce string
@@ -103,7 +108,7 @@ func (c *Client) httpClient() *http.Client {
 	if c.HTTPClient != nil {
 		return c.HTTPClient
 	}
-	return http.DefaultClient
+	return defaultHTTPClient
 }
 
 func (c *Client) request(ctx context.Context, method, url string, payload []byte) (*http.Response, error) {
@@ -204,9 +209,9 @@ func readResponse(res *http.Response) (http.Header, []byte, error) {
 		return res.Header, body, nil
 	}
 
-	problem := &Response{Status: res.StatusCode}
+	problem := &Response{Status: res.StatusCode, RetryAt: parseRetryTime(res.Header.Get("Retry-After"))}
 	if err := json.Unmarshal(body, problem); err != nil {
-		return res.Header, body, fmt.Errorf("acme: %s", res.Status)
+		problem.Detail = res.Status
 	}
 	if problem.Status == 0 {
 		problem.Status = res.StatusCode
@@ -215,11 +220,13 @@ func readResponse(res *http.Response) (http.Header, []byte, error) {
 }
 
 func (c *Client) get(ctx context.Context, url string) (http.Header, []byte, error) {
-	res, err := c.request(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	return readResponse(res)
+	return c.retryRead(ctx, http.MethodGet, url, func() (http.Header, []byte, error) {
+		res, err := c.request(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		return readResponse(res)
+	})
 }
 
 func (c *Client) post(ctx context.Context, url string, payload any) (http.Header, []byte, error) {
@@ -239,7 +246,9 @@ func (c *Client) postWithKID(ctx context.Context, url string, payload any, kid s
 }
 
 func (c *Client) postAsGet(ctx context.Context, url string) (http.Header, []byte, error) {
-	return c.postRaw(ctx, url, nil, c.AccountURL)
+	return c.retryRead(ctx, http.MethodPost, url, func() (http.Header, []byte, error) {
+		return c.postRaw(ctx, url, nil, c.AccountURL)
+	})
 }
 
 func (c *Client) postRaw(ctx context.Context, url string, payload []byte, kid string) (http.Header, []byte, error) {
@@ -324,13 +333,15 @@ func (c *Client) getNonce(ctx context.Context) (string, error) {
 		return "", errors.New("acme: newNonce endpoint is not configured")
 	}
 
-	res, err := c.request(ctx, http.MethodHead, directory.NewNonce, nil)
+	_, _, err = c.retryRead(ctx, http.MethodHead, directory.NewNonce, func() (http.Header, []byte, error) {
+		res, err := c.request(ctx, http.MethodHead, directory.NewNonce, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		return readResponse(res)
+	})
 	if err != nil {
 		return "", err
-	}
-	res.Body.Close()
-	if res.StatusCode >= http.StatusBadRequest {
-		return "", fmt.Errorf("acme: nonce request failed: %s", res.Status)
 	}
 	nonce := c.takeNonce()
 	if nonce == "" {

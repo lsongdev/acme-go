@@ -83,9 +83,12 @@ export default function Issuance({ params: { id } }) {
         ['Challenge', CHALLENGES[issuance.challenge_type] || issuance.challenge_type],
         ['Started', formatDate(issuance.created_at, true)],
         ['Updated', formatDate(issuance.updated_at, true)],
+        ['Attempts', issuance.attempts || 0],
+        ...(issuance.next_attempt_at ? [['Next retry', formatDate(issuance.next_attempt_at, true)]] : []),
+        ...(issuance.order_url ? [['Order', html`<span class="mono" style="overflow-wrap:anywhere">${issuance.order_url}</span>`]] : []),
       ]} />
       <${Steps} issuance=${issuance} />
-      ${issuance.error ? html`<div style="margin-top:14px"><${Notice} tone=${issuance.status === 'waiting' ? 'warn' : 'error'}>${issuance.error}<//></div>` : null}
+      ${issuance.error ? html`<div style="margin-top:14px"><${Notice} tone=${['waiting', 'retrying'].includes(issuance.status) ? 'warn' : 'error'}>${issuance.error}<//></div>` : null}
       ${issuance.status === 'succeeded' ? html`<div style="margin-top:14px"><${Notice} tone="info">The certificate was issued. <${Link} to=${`/certificates/${issuance.certificate_id}`}>View and download<//><//></div>` : null}
     </div>
     ${issuance.dns_records?.length > 0 ? html`<${DNSRecords} issuance=${issuance} onContinue=${resume} busy=${action.busy} />` : null}

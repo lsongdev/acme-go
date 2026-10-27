@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	orderTimeout       = 10 * time.Minute
 	propagationTimeout = 2 * time.Minute
 	persistTimeout     = 10 * time.Second
 )
@@ -53,15 +52,28 @@ func (s *Service) startIssuance(ctx context.Context, certificate *Certificate) (
 		s.workers.Done()
 		return nil, err
 	}
+	public := *issuance
+	s.launchReserved(issuance)
+	return &public, nil
+}
+
+// launch restores a persisted job; launchReserved also handles a new job whose
+// worker reservation prevents Close racing with CreateIssuance.
+func (s *Service) launch(issuance *Issuance) {
+	s.workers.Add(1)
+	s.launchReserved(issuance)
+}
+
+func (s *Service) launchReserved(issuance *Issuance) {
 	jobCtx, cancel := context.WithCancel(s.ctx)
 	job := &job{cancel: cancel, resume: make(chan bool)}
 	s.mu.Lock()
 	s.jobs[issuance.ID] = job
 	s.mu.Unlock()
-
 	go func() {
 		defer s.workers.Done()
 		defer func() {
+			job.cleanup()
 			cancel()
 			s.mu.Lock()
 			delete(s.jobs, issuance.ID)
@@ -69,8 +81,6 @@ func (s *Service) startIssuance(ctx context.Context, certificate *Certificate) (
 		}()
 		s.run(jobCtx, job, issuance)
 	}()
-	public := *issuance
-	return &public, nil
 }
 
 func (s *Service) createIssuance(ctx context.Context, certificate *Certificate) (*Issuance, error) {
@@ -88,43 +98,127 @@ func (s *Service) createIssuance(ctx context.Context, certificate *Certificate) 
 		CSRPEM:        csrPEM,
 		KeyPEM:        keyPEM,
 	}
+	previous, err := s.store.ListIssuances(ctx, certificate.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(previous) > 0 {
+		last := previous[0]
+		if last.Status == IssuanceFailed && last.KeyPEM != "" && last.CSRPEM != "" && last.AccountID == certificate.AccountID && last.ChallengeType == certificate.ChallengeType && slices.Equal(last.Domains, certificate.Domains) {
+			// A previous run exhausted its automatic budget. A manual retry can
+			// still recover a certificate whose finalize response was lost.
+			issuance.KeyPEM, issuance.CSRPEM, issuance.OrderURL = last.KeyPEM, last.CSRPEM, last.OrderURL
+			issuance.DNSRecords, issuance.DNSConfirmed = last.DNSRecords, last.DNSConfirmed
+		}
+	}
 	if err := s.store.CreateIssuance(ctx, issuance); err != nil {
 		return nil, err
 	}
 	return issuance, nil
 }
 
-// run executes one issuance and records its outcome, even when ctx was
-// canceled by CancelIssuance or Close.
+// run keeps transient failures on the same issuance and retains the original
+// key, CSR and order. Shutdown checkpoints; explicit cancellation is terminal.
 func (s *Service) run(ctx context.Context, job *job, issuance *Issuance) {
 	log := s.log.With("issuance", issuance.ID, "certificate", issuance.CertificateID)
-	log.Info("issuance started", "domains", issuance.Domains, "challenge", issuance.ChallengeType)
-	err := s.issue(ctx, job, issuance)
+	finish := func(err error) {
+		// Publish the terminal status only after challenge cleanup completes.
+		job.cleanup()
+		s.finish(issuance, err)
+	}
+	for {
+		if issuance.Status == IssuanceRetrying {
+			timer := time.NewTimer(max(time.Until(issuance.NextAttemptAt), 0))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				if s.ctx.Err() != nil {
+					s.saveProgress(issuance)
+					return
+				}
+				finish(errors.New("canceled"))
+				return
+			case <-timer.C:
+			}
+			issuance.Attempts++
+		}
+		if issuance.Attempts == 0 {
+			issuance.Attempts = 1
+		}
+		issuance.Status, issuance.NextAttemptAt = IssuanceRunning, time.Time{}
+		if err := s.store.UpdateIssuance(ctx, issuance); err != nil {
+			if s.ctx.Err() != nil {
+				s.saveProgress(issuance)
+				return
+			}
+			if ctx.Err() != nil {
+				err = errors.New("canceled")
+			}
+			finish(err)
+			return
+		}
+		started := time.Now()
+		log.Info("issuance attempt started", "domains", issuance.Domains, "attempt", issuance.Attempts)
+		err := s.issue(ctx, job, issuance)
+		if err == nil {
+			finish(nil)
+			return
+		}
+		if s.ctx.Err() != nil {
+			// Never discard the key of an order which may already be issued.
+			s.saveProgress(issuance)
+			return
+		}
+		if ctx.Err() != nil {
+			finish(errors.New("canceled"))
+			return
+		}
+		if !acme.IsRetryable(err) || issuance.Attempts >= s.options.IssuanceRetry.Attempts() {
+			finish(err)
+			return
+		}
+		issuance.Status, issuance.Error = IssuanceRetrying, err.Error()
+		delay := max(s.options.IssuanceRetry.Delay(issuance.Attempts), time.Until(acme.RetryTime(err)))
+		issuance.NextAttemptAt = time.Now().Add(delay).UTC()
+		log.Warn("issuance retry scheduled", "attempt", issuance.Attempts, "step", issuance.Step, "elapsed", time.Since(started), "next_attempt_at", issuance.NextAttemptAt, "error", err)
+		if !s.saveProgress(issuance) {
+			return
+		}
+	}
+}
 
-	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), persistTimeout)
+func (s *Service) saveProgress(issuance *Issuance) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), persistTimeout)
 	defer cancel()
-	// The key now lives on the certificate, or is useless; drop the copy.
-	issuance.CSRPEM, issuance.KeyPEM = "", ""
+	if err := s.store.UpdateIssuance(ctx, issuance); err != nil {
+		s.log.Error("save issuance progress", "issuance", issuance.ID, "error", err)
+		return false
+	}
+	return true
+}
+
+func (s *Service) finish(issuance *Issuance, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), persistTimeout)
+	defer cancel()
+	issuance.NextAttemptAt = time.Time{}
+	// Retain material after exhausted transient failures for a manual retry.
+	if !acme.IsRetryable(err) {
+		issuance.CSRPEM, issuance.KeyPEM = "", ""
+	}
 	if err == nil {
 		issuance.Status, issuance.Step, issuance.Error = IssuanceSucceeded, "done", ""
-		log.Info("issuance succeeded")
+		s.log.Info("issuance succeeded", "issuance", issuance.ID)
 	} else {
-		if ctx.Err() != nil {
-			err = errors.New("canceled")
-			if s.ctx.Err() != nil {
-				err = errors.New("interrupted: the server stopped before this issuance finished")
+		issuance.Status, issuance.Error = IssuanceFailed, err.Error()
+		s.log.Warn("issuance failed", "issuance", issuance.ID, "step", issuance.Step, "error", err)
+		if certificate, getErr := s.store.GetCertificate(ctx, issuance.CertificateID); getErr == nil && certificate.Status == CertificatePending {
+			certificate.Status = CertificateFailed
+			if saveErr := s.store.UpdateCertificate(ctx, certificate); saveErr != nil {
+				s.log.Error("save failed certificate", "error", saveErr)
 			}
 		}
-		issuance.Status, issuance.Error = IssuanceFailed, err.Error()
-		log.Warn("issuance failed", "step", issuance.Step, "error", err)
-		if certificate, getErr := s.store.GetCertificate(persist, issuance.CertificateID); getErr == nil && certificate.Status == CertificatePending {
-			certificate.Status = CertificateFailed
-			_ = s.store.UpdateCertificate(persist, certificate)
-		}
 	}
-	if err := s.store.UpdateIssuance(persist, issuance); err != nil {
-		log.Error("save issuance outcome", "error", err)
-	}
+	s.saveProgress(issuance)
 }
 
 func (s *Service) setStep(ctx context.Context, issuance *Issuance, status, step string) error {
@@ -148,17 +242,31 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 		return fmt.Errorf("account %d is %s", account.ID, account.Status)
 	}
 
-	if err := s.setStep(ctx, issuance, IssuanceRunning, "creating-order"); err != nil {
-		return err
+	var order *acme.OrderResponse
+	if issuance.OrderURL == "" {
+		if err := s.setStep(ctx, issuance, IssuanceRunning, "creating-order"); err != nil {
+			return err
+		}
+		identifiers := make([]acme.Identifier, 0, len(issuance.Domains))
+		for _, domain := range issuance.Domains {
+			identifiers = append(identifiers, acme.Identifier{Type: "dns", Value: domain})
+		}
+		orderURL, created, err := client.CreateOrder(ctx, &acme.OrderRequest{Identifiers: identifiers})
+		if err != nil {
+			return fmt.Errorf("create order: %w", err)
+		}
+		issuance.OrderURL, order = orderURL, created
+		// Persist the URL before any further network operation.
+		if !s.saveProgress(issuance) {
+			return errors.New("could not persist order URL")
+		}
+	} else {
+		order, err = client.GetOrder(ctx, issuance.OrderURL)
+		if err != nil {
+			return fmt.Errorf("get existing order: %w", err)
+		}
 	}
-	identifiers := make([]acme.Identifier, 0, len(issuance.Domains))
-	for _, domain := range issuance.Domains {
-		identifiers = append(identifiers, acme.Identifier{Type: "dns", Value: domain})
-	}
-	orderURL, order, err := client.CreateOrder(ctx, &acme.OrderRequest{Identifiers: identifiers})
-	if err != nil {
-		return fmt.Errorf("create order: %w", err)
-	}
+	orderURL := issuance.OrderURL
 	record := &Order{AccountID: account.ID, IssuanceID: issuance.ID, URL: orderURL, Domains: issuance.Domains, Status: order.Status}
 	if err := s.store.CreateOrder(ctx, record); err != nil {
 		return err
@@ -173,7 +281,11 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 		return err
 	}
 	var pending []pendingChallenge
-	for _, authorizationURL := range order.Authorizations {
+	authorizations := order.Authorizations
+	if order.Status != acme.OrderStatusPending {
+		authorizations = nil
+	}
+	for _, authorizationURL := range authorizations {
 		authorization, err := client.GetAuthorization(ctx, authorizationURL)
 		if err != nil {
 			return fmt.Errorf("get authorization: %w", err)
@@ -201,7 +313,7 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 	if len(pending) > 0 {
 		cleanup, err := s.present(ctx, client, job, issuance, pending)
 		if cleanup != nil {
-			defer cleanup()
+			job.cleanups = append(job.cleanups, cleanup)
 		}
 		if err != nil {
 			return err
@@ -227,29 +339,17 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 	if err := s.setStep(ctx, issuance, IssuanceRunning, "finalizing"); err != nil {
 		return err
 	}
-	orderCtx, cancel := context.WithTimeout(ctx, orderTimeout)
+	orderCtx, cancel := context.WithTimeout(ctx, s.options.OrderTimeout)
 	defer cancel()
-	order, err = client.WaitOrder(orderCtx, orderURL)
+	block, _ := pem.Decode([]byte(issuance.CSRPEM))
+	if block == nil {
+		return errors.New("issuance has no CSR")
+	}
+	order, err = client.FinalizeAndWait(orderCtx, orderURL, block.Bytes)
 	if err != nil {
-		return fmt.Errorf("wait for order: %w", err)
+		return fmt.Errorf("finalize order: %w", err)
 	}
 	record.Status = order.Status
-	if order.Status == acme.OrderStatusReady {
-		block, _ := pem.Decode([]byte(issuance.CSRPEM))
-		if block == nil {
-			return errors.New("issuance has no CSR")
-		}
-		if order, err = client.FinalizeOrder(orderCtx, order.Finalize, block.Bytes); err != nil {
-			return fmt.Errorf("finalize order: %w", err)
-		}
-		record.Status = order.Status
-		if order.Status != acme.OrderStatusValid {
-			if order, err = client.WaitOrder(orderCtx, orderURL); err != nil {
-				return fmt.Errorf("wait for certificate: %w", err)
-			}
-			record.Status = order.Status
-		}
-	}
 	if order.Status != acme.OrderStatusValid || order.Certificate == "" {
 		return fmt.Errorf("order is %s without a certificate", order.Status)
 	}
@@ -257,7 +357,7 @@ func (s *Service) issue(ctx context.Context, job *job, issuance *Issuance) error
 	if err := s.setStep(ctx, issuance, IssuanceRunning, "downloading"); err != nil {
 		return err
 	}
-	certPEM, err := client.GetCertificatePEM(ctx, order.Certificate)
+	certPEM, err := client.GetCertificatePEM(orderCtx, order.Certificate)
 	if err != nil {
 		return fmt.Errorf("download certificate: %w", err)
 	}
@@ -342,6 +442,10 @@ func (s *Service) present(ctx context.Context, client *acme.Client, job *job, is
 		return cleanup, nil
 	}
 
+	if issuance.DNSConfirmed {
+		return nil, nil
+	}
+
 	// Manual DNS-01: wait until the operator has published the records.
 	message := ""
 	for {
@@ -364,11 +468,13 @@ func (s *Service) present(ctx context.Context, client *acme.Client, job *job, is
 			return nil, err
 		}
 		if force {
-			return nil, nil
+			issuance.DNSConfirmed = true
+			return nil, s.store.UpdateIssuance(ctx, issuance)
 		}
 		err := checkDNS(ctx, records)
 		if err == nil {
-			return nil, nil
+			issuance.DNSConfirmed = true
+			return nil, s.store.UpdateIssuance(ctx, issuance)
 		}
 		if ctx.Err() != nil {
 			return nil, ctx.Err()

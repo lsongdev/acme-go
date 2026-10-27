@@ -186,3 +186,42 @@ func TestReusedOrderURL(t *testing.T) {
 		t.Fatalf("ids %d/%d, orders %+v", first.ID, retry.ID, orders)
 	}
 }
+
+// A version-one database can contain an unfinished order and its private key.
+// The upgrade must link that order to the issuance without losing material.
+func TestUpgradeRetainsUnfinishedOrder(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "upgrade.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statements := []string{
+		migrations[0],
+		`CREATE TABLE acme_schema(version INTEGER NOT NULL); INSERT INTO acme_schema VALUES(1)`,
+		`INSERT INTO acme_providers VALUES(1,'CA','https://ca.example/directory',1)`,
+		`INSERT INTO acme_accounts VALUES(1,1,'test@example.org','https://ca.example/account/1','valid','thumbprint','account-key',1,1)`,
+		`INSERT INTO acme_certificates(id,domains,account_id,challenge_type,auto_renew,status,created_at,updated_at) VALUES(1,'example.org',1,'http-01',1,'pending',1,1)`,
+		`INSERT INTO acme_issuances(id,certificate_id,account_id,domains,challenge_type,status,step,csr_pem,key_pem,created_at,updated_at) VALUES(1,1,1,'example.org','http-01','running','finalizing','original-csr','original-key',1,1)`,
+		`INSERT INTO acme_orders VALUES(1,1,1,'https://ca.example/order/1','example.org','ready',1,1)`,
+	}
+	for _, statement := range statements {
+		if _, err := db.ExecContext(ctx, statement); err != nil {
+			db.Close()
+			t.Fatal(err)
+		}
+	}
+	db.Close()
+	upgraded, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer upgraded.Close()
+	issuance, err := upgraded.GetIssuance(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if issuance.KeyPEM != "original-key" || issuance.CSRPEM != "original-csr" || issuance.OrderURL != "https://ca.example/order/1" || issuance.Status != "running" {
+		t.Fatal("upgrade lost the unfinished issuance")
+	}
+}

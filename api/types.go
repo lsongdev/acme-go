@@ -48,7 +48,8 @@ const (
 // Issuance statuses.
 const (
 	IssuanceRunning   = "running"
-	IssuanceWaiting   = "waiting" // waiting for the operator, see Issuance.DNSRecords
+	IssuanceWaiting   = "waiting"  // waiting for the operator, see Issuance.DNSRecords
+	IssuanceRetrying  = "retrying" // transient failure; NextAttemptAt is persisted
 	IssuanceSucceeded = "succeeded"
 	IssuanceFailed    = "failed"
 )
@@ -134,7 +135,11 @@ type Issuance struct {
 	Status        string      `json:"status"`
 	Step          string      `json:"step"`
 	Error         string      `json:"error,omitempty"`
+	OrderURL      string      `json:"order_url,omitempty"`
+	Attempts      int         `json:"attempts"`
+	NextAttemptAt time.Time   `json:"next_attempt_at,omitzero"`
 	DNSRecords    []DNSRecord `json:"dns_records,omitempty"`
+	DNSConfirmed  bool        `json:"dns_confirmed,omitempty"`
 	CSRPEM        string      `json:"-"`
 	KeyPEM        string      `json:"-"`
 	CreatedAt     time.Time   `json:"created_at"`

@@ -115,7 +115,7 @@ client.HTTPClient = &http.Client{
 }
 ```
 
-If it is nil, `http.DefaultClient` is used.
+If it is nil, a shared ACME HTTP client with the defaults described below is used.
 
 ## Orders and challenges
 
@@ -163,8 +163,7 @@ Once every authorization is valid, finalize with a CSR and wait for the
 certificate:
 
 ```go
-_, err = client.FinalizeOrder(ctx, order.Finalize, csrDER)
-order, err = client.WaitOrder(ctx, orderURL)
+order, err = client.FinalizeAndWait(ctx, orderURL, csrDER)
 chain, err := client.GetCertificatePEM(ctx, order.Certificate)
 ```
 
@@ -215,3 +214,54 @@ auto-renewal enabled are renewed 30 days before they expire.
 The UI and API have no authentication unless `ACME_PASSWORD` is set (HTTP
 basic auth, user `admin`), and they hold private keys, so keep the default
 loopback address or set a password.
+
+## Timeouts, retries and recovery
+
+The client defaults to a 60-second HTTP request timeout and a 30-second TLS
+handshake timeout. Override them with
+`acme.NewHTTPClient(acme.HTTPOptions{Timeout: ..., TLSHandshakeTimeout: ...})`,
+or inject your own `Client.HTTPClient`. Connection pooling and normal TLS
+certificate verification remain enabled.
+
+`Client.RetryPolicy` controls safe reads (GET directory, HEAD nonce and signed
+POST-as-GET queries/downloads). Defaults are four attempts with exponential
+backoff starting at one second, capped at thirty seconds, with jitter.
+`MaxAttempts: 1` disables retries. Transient network failures and HTTP
+408/429/500/502/503/504 are retryable; other errors are returned. Retry-After is
+respected, including when it exceeds the caller's remaining context budget.
+Every signed retry gets a fresh nonce and signature. Mutating operations such
+as newOrder are not blindly replayed by the HTTP layer.
+
+Use `Client.FinalizeAndWait(ctx, orderURL, csrDER)` to finalize safely: it checks
+the original order after an uncertain response, waits for processing orders,
+and only resubmits the same CSR when the order is ready. The caller's context
+bounds the entire operation.
+
+The certificate manager (`api.Service`) has a separate `IssuanceRetry` policy:
+four background attempts, starting at one minute, capped at one hour, with
+jitter. This applies to first issuance as well as renewal, independently of the
+auto-renewal scan interval. `ValidationTimeout` defaults to five minutes per
+authorization and `OrderTimeout` to ten minutes for finalization plus download.
+`RequestRetry` configures the underlying client's read retry policy.
+
+Unfinished jobs persist their order URL, original key/CSR, attempt count, manual
+DNS confirmation and next retry time. Closing the service checkpoints jobs;
+starting a new service resumes them. A store must have only one owning service.
+An explicit cancellation is terminal. Permanent failures are not retried. After
+a transient failure exhausts the automatic budget, a manual certificate retry
+can still recover the original order/key; successful or canceled issuances
+clear their temporary key material. Existing active certificates remain in use
+while renewal retries run. Past failed jobs whose keys were already discarded
+by an older version cannot be recovered.
+
+`web.Options` is `api.Options`, so embedding applications can supply all these
+settings directly without adding protocol logic. The UI shows retry status,
+attempt counts and the next retry time; request retry logs include operation,
+elapsed time and delay, and issuance retry logs include the stage and schedule.
+
+The standalone command exposes `-request-timeout`, `-tls-timeout`,
+`-request-attempts`, `-issuance-attempts`, `-retry-delay`, `-validation-timeout`
+and `-order-timeout`. Zero values use defaults; set attempt limits to 1 to disable
+automatic retries at that layer. Custom `api.Store` implementations must persist
+the new issuance fields; the obsolete `FailUnfinishedIssuances` method has been
+removed. SQLite databases migrate automatically.

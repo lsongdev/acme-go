@@ -26,6 +26,7 @@ const STATUS = {
   revoked: ['Revoked', 'gray'],
   // issuances
   running: ['Running', 'blue'],
+  retrying: ['Retry scheduled', 'amber'],
   waiting: ['Needs action', 'amber'],
   succeeded: ['Succeeded', 'green'],
   // accounts and orders
@@ -58,7 +59,7 @@ export const stepLabel = step => STEPS.find(([key]) => key === step)?.[1] || ste
 
 export const CHALLENGES = { 'http-01': 'HTTP-01', 'dns-01': 'DNS-01' };
 
-export const unfinished = issuance => issuance && (issuance.status === 'running' || issuance.status === 'waiting');
+export const unfinished = issuance => issuance && (issuance.status === 'running' || issuance.status === 'waiting' || issuance.status === 'retrying');
 
 export function formatDate(value, withTime = false) {
   if (!value) return '—';

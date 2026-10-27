@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/lsongdev/acme-go/acme"
 	"github.com/lsongdev/acme-go/store"
 	"github.com/lsongdev/acme-go/web"
 )
@@ -47,6 +48,13 @@ func run(args []string) error {
 	dbPath := flags.String("db", defaultDatabasePath(), "SQLite database path")
 	renewInterval := flags.Duration("renew-interval", 12*time.Hour, "how often to check for certificates due for renewal (0 disables)")
 	renewBefore := flags.Duration("renew-before", 30*24*time.Hour, "renew certificates this long before they expire")
+	requestTimeout := flags.Duration("request-timeout", time.Minute, "single ACME HTTP request timeout")
+	tlsTimeout := flags.Duration("tls-timeout", 30*time.Second, "ACME TLS handshake timeout")
+	requestAttempts := flags.Int("request-attempts", 4, "maximum attempts for safe reads (1 disables retries)")
+	issuanceAttempts := flags.Int("issuance-attempts", 4, "maximum background attempts per issuance")
+	retryDelay := flags.Duration("retry-delay", time.Minute, "initial issuance retry backoff")
+	validationTimeout := flags.Duration("validation-timeout", 5*time.Minute, "authorization validation budget per attempt")
+	orderTimeout := flags.Duration("order-timeout", 10*time.Minute, "finalization and download budget per attempt")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -63,7 +71,13 @@ func run(args []string) error {
 		return err
 	}
 	defer certs.Close()
-	manager, err := web.NewWithStore(ctx, certs, web.Options{RenewBefore: *renewBefore, Logger: logger})
+	manager, err := web.NewWithStore(ctx, certs, web.Options{
+		RenewBefore: *renewBefore, Logger: logger,
+		HTTPClient:        acme.NewHTTPClient(acme.HTTPOptions{Timeout: *requestTimeout, TLSHandshakeTimeout: *tlsTimeout}),
+		RequestRetry:      acme.RetryPolicy{MaxAttempts: *requestAttempts},
+		IssuanceRetry:     acme.RetryPolicy{MaxAttempts: *issuanceAttempts, InitialDelay: *retryDelay},
+		ValidationTimeout: *validationTimeout, OrderTimeout: *orderTimeout,
+	})
 	if err != nil {
 		return err
 	}

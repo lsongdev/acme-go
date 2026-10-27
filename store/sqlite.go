@@ -132,6 +132,13 @@ CREATE TABLE acme_orders (
 	created_at  INTEGER NOT NULL,
 	updated_at  INTEGER NOT NULL
 );
+`, `
+ALTER TABLE acme_issuances ADD COLUMN dns_confirmed INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE acme_issuances ADD COLUMN order_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE acme_issuances ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE acme_issuances ADD COLUMN next_attempt_at INTEGER NOT NULL DEFAULT 0;
+-- Recover orders created before order_url was stored on the issuance.
+UPDATE acme_issuances SET order_url = COALESCE((SELECT url FROM acme_orders WHERE issuance_id = acme_issuances.id ORDER BY id DESC LIMIT 1), '');
 `}
 
 // legacyRename upgrades a database from before the shared-database layout,
@@ -444,17 +451,20 @@ func (s *SQLite) DeleteCertificate(ctx context.Context, id int64) error {
 
 // Issuances
 
-const issuanceColumns = `id, certificate_id, account_id, domains, challenge_type, status, step, error, dns_records, csr_pem, key_pem, created_at, updated_at`
+const issuanceColumns = `id, certificate_id, account_id, domains, challenge_type, status, step, error, dns_records, csr_pem, key_pem, dns_confirmed, order_url, attempts, next_attempt_at, created_at, updated_at`
 
 func scanIssuance(row scanner) (api.Issuance, error) {
 	var i api.Issuance
 	var domains, records string
-	var created, updated int64
-	if err := row.Scan(&i.ID, &i.CertificateID, &i.AccountID, &domains, &i.ChallengeType, &i.Status, &i.Step, &i.Error, &records, &i.CSRPEM, &i.KeyPEM, &created, &updated); err != nil {
+	var created, updated, nextAttempt int64
+	if err := row.Scan(&i.ID, &i.CertificateID, &i.AccountID, &domains, &i.ChallengeType, &i.Status, &i.Step, &i.Error, &records, &i.CSRPEM, &i.KeyPEM, &i.DNSConfirmed, &i.OrderURL, &i.Attempts, &nextAttempt, &created, &updated); err != nil {
 		return i, err
 	}
 	i.Domains = splitDomains(domains)
 	i.CreatedAt, i.UpdatedAt = fromUnix(created), fromUnix(updated)
+	if nextAttempt != 0 {
+		i.NextAttemptAt = time.UnixMilli(nextAttempt).UTC()
+	}
 	return i, json.Unmarshal([]byte(records), &i.DNSRecords)
 }
 
@@ -480,8 +490,8 @@ func (s *SQLite) CreateIssuance(ctx context.Context, i *api.Issuance) error {
 	if err != nil {
 		return err
 	}
-	result, err := s.db.ExecContext(ctx, `INSERT INTO acme_issuances (certificate_id, account_id, domains, challenge_type, status, step, error, dns_records, csr_pem, key_pem, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		i.CertificateID, i.AccountID, joinDomains(i.Domains), i.ChallengeType, i.Status, i.Step, i.Error, string(records), i.CSRPEM, i.KeyPEM, unix(now), unix(now))
+	result, err := s.db.ExecContext(ctx, `INSERT INTO acme_issuances (certificate_id, account_id, domains, challenge_type, status, step, error, dns_records, csr_pem, key_pem, dns_confirmed, order_url, attempts, next_attempt_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		i.CertificateID, i.AccountID, joinDomains(i.Domains), i.ChallengeType, i.Status, i.Step, i.Error, string(records), i.CSRPEM, i.KeyPEM, i.DNSConfirmed, i.OrderURL, i.Attempts, retryMillis(i.NextAttemptAt), unix(now), unix(now))
 	if err != nil {
 		err = mapError(err, "issuance")
 		if errors.Is(err, api.ErrConflict) {
@@ -499,30 +509,16 @@ func (s *SQLite) UpdateIssuance(ctx context.Context, i *api.Issuance) error {
 	if err != nil {
 		return err
 	}
-	result, err := s.db.ExecContext(ctx, `UPDATE acme_issuances SET status = ?, step = ?, error = ?, dns_records = ?, csr_pem = ?, key_pem = ?, updated_at = ? WHERE id = ?`,
-		i.Status, i.Step, i.Error, string(records), i.CSRPEM, i.KeyPEM, unix(i.UpdatedAt), i.ID)
+	result, err := s.db.ExecContext(ctx, `UPDATE acme_issuances SET status = ?, step = ?, error = ?, dns_records = ?, csr_pem = ?, key_pem = ?, dns_confirmed = ?, order_url = ?, attempts = ?, next_attempt_at = ?, updated_at = ? WHERE id = ?`,
+		i.Status, i.Step, i.Error, string(records), i.CSRPEM, i.KeyPEM, i.DNSConfirmed, i.OrderURL, i.Attempts, retryMillis(i.NextAttemptAt), unix(i.UpdatedAt), i.ID)
 	return checkAffected(result, err, "issuance")
 }
 
-func (s *SQLite) FailUnfinishedIssuances(ctx context.Context, reason string) (int64, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
+func retryMillis(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
 	}
-	defer tx.Rollback()
-	now := time.Now().Unix()
-	result, err := tx.ExecContext(ctx, `UPDATE acme_issuances SET status = 'failed', error = ?, csr_pem = '', key_pem = '', updated_at = ? WHERE status NOT IN ('succeeded', 'failed')`, reason, now)
-	if err != nil {
-		return 0, err
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE acme_certificates SET status = 'failed', updated_at = ? WHERE status = 'pending'`, now); err != nil {
-		return 0, err
-	}
-	n, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	return n, tx.Commit()
+	return t.UnixMilli()
 }
 
 // Orders

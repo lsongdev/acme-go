@@ -29,6 +29,7 @@ type env struct {
 	server  *httptest.Server
 
 	provider api.DNSProvider // DNS-01 provider of services the env starts
+	options  api.Options
 
 	mu  sync.Mutex
 	dns map[string][]string // published TXT records
@@ -68,7 +69,12 @@ func newEnvWith(t *testing.T, provider func(*env) api.DNSProvider) *env {
 
 // newService starts a service on the env's database, as after a restart.
 func (e *env) newService() {
-	service, err := api.NewService(context.Background(), e.db, api.Options{ValidationTimeout: 10 * time.Second, DNSProvider: e.provider, Logger: slog.New(slog.DiscardHandler)})
+	options := e.options
+	if options.ValidationTimeout == 0 {
+		options.ValidationTimeout = 10 * time.Second
+	}
+	options.DNSProvider, options.Logger = e.provider, slog.New(slog.DiscardHandler)
+	service, err := api.NewService(context.Background(), e.db, options)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -382,16 +388,18 @@ func TestCancelAndRestart(t *testing.T) {
 		t.Fatalf("certificate status = %s", certificate.Status)
 	}
 
-	// An issuance left waiting when the process stops is failed on restart.
+	// An issuance left waiting retains its order and manual DNS instructions on restart.
 	var retry api.Issuance
 	e.call("POST", fmt.Sprintf("/certificates/%d/renew", result.Certificate.ID), nil, 202, &retry)
 	e.waitIssuance(retry.ID, api.IssuanceWaiting)
 	e.service.Close()
 	e.newService()
-	issuance = e.waitIssuance(retry.ID, api.IssuanceFailed)
-	if !strings.HasPrefix(issuance.Error, "interrupted") {
-		t.Fatalf("error = %q", issuance.Error)
+	issuance = e.waitIssuance(retry.ID, api.IssuanceWaiting)
+	if len(issuance.DNSRecords) == 0 || issuance.OrderURL == "" {
+		t.Fatalf("missing recovery state: %+v", issuance)
 	}
+	e.call("POST", fmt.Sprintf("/issuances/%d/cancel", retry.ID), nil, 202, nil)
+	e.waitIssuance(retry.ID, api.IssuanceFailed)
 }
 
 func TestAPIErrors(t *testing.T) {

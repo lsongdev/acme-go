@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
 )
 
 const OrderStatusPending = "pending"
@@ -72,4 +75,44 @@ func (c *Client) FinalizeOrder(ctx context.Context, finalizeURL string, csrDER [
 		return nil, err
 	}
 	return resp, nil
+}
+
+// FinalizeAndWait reconciles the order before submitting a CSR. In particular,
+// a lost finalize response does not imply failure: processing orders are polled
+// and valid orders are returned without resubmitting. Retries use the same CSR.
+func (c *Client) FinalizeAndWait(ctx context.Context, orderURL string, csrDER []byte) (*OrderResponse, error) {
+	var lastErr error
+	for attempts := 0; ; {
+		order, err := c.WaitOrder(ctx, orderURL)
+		if err != nil {
+			return nil, err
+		}
+		if order.Status == OrderStatusValid {
+			return order, nil
+		}
+		if attempts >= c.RetryPolicy.Attempts() {
+			return nil, lastErr
+		}
+		attempts++
+		result, err := c.FinalizeOrder(ctx, order.Finalize, csrDER)
+		if err == nil && result.Status == OrderStatusValid {
+			return result, nil
+		}
+		var problem *Response
+		notReady := errors.As(err, &problem) && problem.Type == "urn:ietf:params:acme:error:orderNotReady"
+		if err != nil && !IsRetryable(err) && !notReady {
+			return nil, err
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		lastErr = err
+		if lastErr == nil {
+			lastErr = fmt.Errorf("acme: order remained %s after finalization", result.Status)
+		}
+		delay := max(c.RetryPolicy.Delay(attempts), time.Until(RetryTime(err)))
+		if waitErr := wait(ctx, delay); waitErr != nil {
+			return nil, errors.Join(lastErr, waitErr)
+		}
+	}
 }

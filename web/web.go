@@ -13,9 +13,7 @@ import (
 	"database/sql"
 	"embed"
 	"io/fs"
-	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/lsongdev/acme-go/api"
 	"github.com/lsongdev/acme-go/store"
@@ -34,11 +32,7 @@ var UI = func() fs.FS {
 }()
 
 // Options configures the certificate manager.
-type Options struct {
-	RenewBefore time.Duration // renew this long before expiry (30 days by default)
-	DNSProvider api.DNSProvider
-	Logger      *slog.Logger
-}
+type Options = api.Options
 
 // ACME is an assembled certificate manager.
 type ACME struct {
@@ -58,7 +52,7 @@ func New(ctx context.Context, db *sql.DB, opts Options) (*ACME, error) {
 
 // NewWithStore starts the issuance service on any api.Store.
 func NewWithStore(ctx context.Context, certs api.Store, opts Options) (*ACME, error) {
-	service, err := api.NewService(ctx, certs, api.Options{RenewBefore: opts.RenewBefore, DNSProvider: opts.DNSProvider, Logger: opts.Logger})
+	service, err := api.NewService(ctx, certs, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -31,8 +31,14 @@ type DNSScope interface {
 
 // Options configures a Service. Zero values select the defaults.
 type Options struct {
-	// HTTPClient is used for all ACME requests.
+	// HTTPClient is used for all ACME requests (nil uses acme defaults).
 	HTTPClient *http.Client
+	// RequestRetry applies only to safe ACME reads.
+	RequestRetry acme.RetryPolicy
+	// IssuanceRetry bounds background attempts (four, starting at one minute).
+	IssuanceRetry acme.RetryPolicy
+	// OrderTimeout bounds finalization and certificate download (10 minutes).
+	OrderTimeout time.Duration
 	// DNSProvider publishes DNS-01 records; nil means manual DNS-01.
 	DNSProvider DNSProvider
 	// RenewBefore is how long before expiry auto-renewal starts (30 days).
@@ -61,15 +67,29 @@ type Service struct {
 }
 
 type job struct {
-	cancel context.CancelFunc
-	resume chan bool // receives force flag from ContinueIssuance
+	cancel   context.CancelFunc
+	resume   chan bool // receives force flag from ContinueIssuance
+	cleanups []func()  // keep challenges available until this job stops
 }
 
-// NewService creates a Service. It marks issuances interrupted by a previous
-// process as failed, since their in-memory challenge state is gone.
+func (j *job) cleanup() {
+	for _, cleanup := range j.cleanups {
+		cleanup()
+	}
+	j.cleanups = nil
+}
+
+// NewService creates a Service and resumes unfinished issuances from their
+// retained order, key and CSR. Only one Service may own a store at a time.
 func NewService(ctx context.Context, store Store, options Options) (*Service, error) {
-	if options.HTTPClient == nil {
-		options.HTTPClient = &http.Client{Timeout: 30 * time.Second}
+	if options.OrderTimeout <= 0 {
+		options.OrderTimeout = 10 * time.Minute
+	}
+	if options.IssuanceRetry.InitialDelay <= 0 {
+		options.IssuanceRetry.InitialDelay = time.Minute
+	}
+	if options.IssuanceRetry.MaxDelay <= 0 {
+		options.IssuanceRetry.MaxDelay = time.Hour
 	}
 	if options.RenewBefore <= 0 {
 		options.RenewBefore = 30 * 24 * time.Hour
@@ -80,11 +100,12 @@ func NewService(ctx context.Context, store Store, options Options) (*Service, er
 	if options.Logger == nil {
 		options.Logger = slog.Default()
 	}
-	if _, err := store.FailUnfinishedIssuances(ctx, "interrupted: the server stopped before this issuance finished"); err != nil {
+	unfinished, err := store.ListIssuances(ctx, 0)
+	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
-	return &Service{
+	service := &Service{
 		store:   store,
 		options: options,
 		log:     options.Logger,
@@ -92,10 +113,22 @@ func NewService(ctx context.Context, store Store, options Options) (*Service, er
 		cancel:  cancel,
 		jobs:    make(map[int64]*job),
 		tokens:  make(map[string]string),
-	}, nil
+	}
+	for _, issuance := range unfinished {
+		if issuance.Finished() {
+			continue
+		}
+		if issuance.KeyPEM == "" || issuance.CSRPEM == "" {
+			// Old databases may contain jobs with no recoverable key material.
+			service.finish(&issuance, errors.New("interrupted: issuance has no recoverable key or CSR"))
+			continue
+		}
+		service.launch(&issuance)
+	}
+	return service, nil
 }
 
-// Close cancels running issuances and waits for them to record their outcome.
+// Close checkpoints unfinished issuances for restart and waits for workers.
 func (s *Service) Close() error {
 	s.mu.Lock()
 	s.closed = true
@@ -118,6 +151,8 @@ func (s *Service) newClient(provider *Provider, account *Account) (*acme.Client,
 		return nil, err
 	}
 	client.HTTPClient = s.options.HTTPClient
+	client.RetryPolicy = s.options.RequestRetry
+	client.Logger = s.log
 	return client, nil
 }
 

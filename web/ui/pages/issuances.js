@@ -8,7 +8,7 @@ export default function Issuances() {
     <${Notice} error=${error} />
     ${data === undefined ? (error ? null : html`<${Loading} />`) : data.length === 0 ? html`<${Empty}>No issuances yet.<//>` : html`
       <${Table}>
-        <thead><tr><th>#</th><th>Domains</th><th>Status</th><th>Step</th><th>Challenge</th><th>Started</th><th>Error</th></tr></thead>
+        <thead><tr><th>#</th><th>Domains</th><th>Status</th><th>Step</th><th>Challenge</th><th>Started</th><th>Attempts</th><th>Next retry</th><th>Error</th></tr></thead>
         <tbody>${data.map(i => html`<tr key=${i.id}>
           <td><${Link} to=${`/issuances/${i.id}`}>#${i.id}<//></td>
           <td><${Link} to=${`/certificates/${i.certificate_id}`}><${Domains} domains=${i.domains} /><//></td>
@@ -16,6 +16,8 @@ export default function Issuances() {
           <td>${stepLabel(i.step)}</td>
           <td>${CHALLENGES[i.challenge_type] || i.challenge_type}</td>
           <td>${formatDate(i.created_at, true)}</td>
+          <td>${i.attempts || 0}</td>
+          <td>${formatDate(i.next_attempt_at, true)}</td>
           <td class="error-cell" title=${i.error}>${i.error || ''}</td>
         </tr>`)}</tbody>
       <//>`}
