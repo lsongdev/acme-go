@@ -32,9 +32,9 @@ export default function NewCertificate() {
     });
   };
 
-  const back = html`<a class="button" href=${href('/certificates')}>Back</a>`;
-  if (accounts.data === undefined && !accounts.error) return html`<${Page} title="Request certificate" actions=${back}><${Loading} /><//>`;
-  return html`<${Page} title="Request certificate" actions=${back}>
+  const back = { href: href('/certificates'), label: 'Certificates' };
+  if (accounts.data === undefined && !accounts.error) return html`<${Page} title="Request certificate" back=${back}><${Loading} /><//>`;
+  return html`<${Page} title="Request certificate" back=${back}>
     <${Notice} error=${accounts.error || error} />
     ${valid.length === 0 ? html`<${Notice} tone="warn">No usable ACME account. <${Link} to="/accounts">Register one<//> first.<//>` : null}
     <form class="card form" onSubmit=${submit}>

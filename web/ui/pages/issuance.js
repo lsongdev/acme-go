@@ -52,9 +52,9 @@ export default function Issuance({ params: { id } }) {
   const { api, href } = usePanel();
   const { data: issuance, error, reload } = useApi(`/issuances/${id}`, i => unfinished(i) ? 2000 : 0);
   const action = useAction();
-  const back = html`<a class="button" href=${href('/issuances')}>Back</a>`;
+  const back = { href: href('/issuances'), label: 'Issuances' };
   if (!issuance) {
-    return html`<${Page} title=${`Issuance #${id}`} actions=${back}>
+    return html`<${Page} title=${`Issuance #${id}`} back=${back}>
       ${error ? html`<${Notice} error=${error} />` : html`<${Loading} />`}
     <//>`;
   }
@@ -71,10 +71,10 @@ export default function Issuance({ params: { id } }) {
     });
   };
 
-  return html`<${Page} title=${`Issuance #${issuance.id}`} actions=${html`
+  return html`<${Page} title=${`Issuance #${issuance.id}`} back=${back} actions=${html`
       <a class="button" href=${href(`/certificates/${issuance.certificate_id}`)}>View certificate</a>
       ${unfinished(issuance) ? html`<button class="button button-danger" onClick=${cancel} disabled=${action.busy}>Cancel issuance</button>` : null}
-      ${back}`}>
+      `}>
     <${Notice} error=${action.error} />
     <div class="card">
       <${KV} items=${[

@@ -24,9 +24,9 @@ export default function Certificate({ params: { id } }) {
   const [reason, setReason] = useState(0);
 
   const c = certificate.data;
-  const back = html`<a class="button" href=${href('/certificates')}>Back</a>`;
+  const back = { href: href('/certificates'), label: 'Certificates' };
   if (!c) {
-    return html`<${Page} title="Certificate" actions=${back}>
+    return html`<${Page} title="Certificate" back=${back}>
       ${certificate.error ? html`<${Notice} error=${certificate.error} />` : html`<${Loading} />`}
     <//>`;
   }
@@ -54,13 +54,13 @@ export default function Certificate({ params: { id } }) {
     });
   };
 
-  return html`<${Page} title=${html`<span class="mono">${c.domains[0]}</span>`} actions=${html`
+  return html`<${Page} title=${html`<span class="mono">${c.domains[0]}</span>`} back=${back} actions=${html`
       ${c.status !== 'revoked' ? html`
         <button class="button button-primary" onClick=${renew} disabled=${action.busy || busyIssuing}>
           ${c.status === 'active' ? 'Renew now' : 'Issue again'}
         </button>` : null}
       ${c.cert_pem ? html`<a class="button" href=${download('zip')} download>Download</a>` : null}
-      ${back}`}>
+      `}>
     <${Notice} error=${action.error || certificate.error} />
     ${busyIssuing ? html`<${Notice} tone="info">
       Issuing: <${Link} to=${`/issuances/${issuances.data.find(unfinished).id}`}>view progress<//>
