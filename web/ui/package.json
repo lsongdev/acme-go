@@ -4,6 +4,6 @@
   "description": "Browser dependencies of this UI. node_modules is committed (npm ci output) so the Go module embeds it; make check-deps verifies it matches the lockfile.",
   "dependencies": {
     "@lsongdev/scripts": "0.1.0-rc.4",
-    "@lsongdev/stylesheets": "1.2.0"
+    "@lsongdev/stylesheets": "1.2.1"
   }
 }

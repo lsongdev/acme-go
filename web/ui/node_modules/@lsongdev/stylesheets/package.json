@@ -1,6 +1,6 @@
 {
   "name": "@lsongdev/stylesheets",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Semantic-token CSS components: plain stylesheets, no build step to use them.",
   "license": "MIT",
   "type": "module",
@@ -12,10 +12,17 @@
     "./*.css": "./*.css",
     "./package.json": "./package.json"
   },
-  "files": ["*.css", "theme/", "dist/"],
+  "files": [
+    "*.css",
+    "theme/",
+    "dist/"
+  ],
   "scripts": {
     "build": "node tools/bundle.js",
     "prepack": "node tools/bundle.js"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/lsongdev/stylesheets.git" }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lsongdev/stylesheets.git"
+  }
 }

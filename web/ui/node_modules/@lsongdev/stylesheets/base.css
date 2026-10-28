@@ -1,5 +1,13 @@
 @import url(./color.css);
 
+/* Responsive layouts keep their intended text size, including wide tables.
+   Use a percentage so browser zoom remains available. The host rule also
+   covers components that load base.css inside a shadow root. */
+:where(html, :host) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 /*
  * Base token layers
  * 1. Palette tokens:   --color-gray-*, --color-blue-* (color.css)
