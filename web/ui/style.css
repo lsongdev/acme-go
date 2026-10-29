@@ -25,7 +25,6 @@
   --radius: var(--radius-md);
   --shadow: 0 1px 2px rgb(var(--shadow-color) / 6%), 0 1px 3px rgb(var(--shadow-color) / 8%);
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --sidebar: 220px;
 }
 
 * { box-sizing: border-box; }
@@ -48,56 +47,16 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .nowrap { white-space: nowrap; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Layout */
-.layout { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); min-height: 100vh; }
-.sidebar {
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
-  background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px;
-}
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 16px; color: var(--text); padding: 4px 8px 16px; }
-.brand:hover { text-decoration: none; }
-.brand-mark { color: var(--primary); }
-.sidebar .menu-toggle { display: none; } /* beats .button's display */
-.nav-group { margin-bottom: 14px; }
-.nav-heading { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 0 8px 4px; letter-spacing: .04em; }
-.nav-link {
-  display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px;
-  color: var(--text); font-weight: 500;
-}
-.nav-link:hover { background: var(--surface-2); text-decoration: none; }
-.nav-link.active { background: var(--primary-soft); color: var(--primary); }
-.nav-icon { width: 18px; text-align: center; opacity: .8; }
-.nav-count { margin-left: auto; background: var(--primary); color: var(--primary-text); border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; }
-.main { padding: 24px 28px 48px; min-width: 0; }
-
-@media (max-width: 760px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: sticky; z-index: 20; height: auto; padding: 8px 16px; display: flex; align-items: center; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--border); }
-  .brand { padding: 6px 0; }
-  .sidebar .menu-toggle { display: inline-flex; margin-left: auto; }
-  .nav { display: none; width: 100%; padding-top: 8px; }
-  .menu-open .nav { display: block; }
-  .main { padding: 16px 16px 40px; }
-}
-
-/* Page (the header comes from page.css) */
-/* Return navigation stays on the title row, including on narrow screens. */
-.page-header-with-back { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: start; }
-.page-header-with-back > .page-title { grid-column: 1; grid-row: 1; }
-.page-header-with-back > .page-actions { grid-column: 2; grid-row: 1; justify-content: flex-end; }
-.page-back { grid-column: 3; grid-row: 1; justify-self: end; max-width: min(40vw, 320px); padding-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-@media (max-width: 1100px) {
-  .page-header-with-back { grid-template-columns: minmax(0, 1fr) auto; }
-  .page-header-with-back > .page-back { grid-column: 2; }
-  .page-header-with-back > .page-actions { grid-column: 1 / -1; grid-row: 2; }
-}
+/* Page (the header, with its return link, comes from page.css) */
 .section { margin-top: 24px; }
 .section > h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
 
 /* Cards & grids */
-/* Pages space cards themselves. */
+/* Pages space their blocks themselves: 16px between consecutive cards and
+   grids, a section's 24px where one is marked .section. */
 .card { margin: 0; }
-.card + .card { margin-top: 16px; }
+:is(.card, .grid, .grid-2) + :is(.card, .grid, .grid-2) { margin-top: 16px; }
+:is(.card, .grid, .grid-2).section { margin-top: 24px; }
 /* Grids space their cells with gap; sibling margins would offset rows. */
 :is(.grid, .grid-2) > .card { margin-top: 0; }
 .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }

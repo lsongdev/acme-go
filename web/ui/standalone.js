@@ -3,6 +3,10 @@
 // panel shell would.
 import { html, render } from './lib/html.js';
 import { mount } from './module.js';
+import { Navbar } from './node_modules/@lsongdev/scripts/react/components/index.js';
+import { createHashNavigation } from './node_modules/@lsongdev/scripts/navigation/hash.js';
+
+const navigation = createHashNavigation({ event: 'panel:routechange', stateKey: 'panelNavigation' });
 
 const manifest = await (await fetch('manifest.json')).json();
 document.title = manifest.title;
@@ -18,11 +22,7 @@ const href = (path, query) => {
   return '#' + path + (s ? '?' + s : '');
 };
 
-function navigate(to, { replace = false } = {}) {
-  if (replace) history.replaceState(null, '', '#' + to);
-  else history.pushState(null, '', '#' + to);
-  dispatchEvent(new HashChangeEvent('hashchange'));
-}
+const navigate = navigation.navigate;
 
 function context() {
   return {
@@ -31,6 +31,7 @@ function context() {
     assetsBase: new URL('./', document.baseURI).href,
     ...location(),
     navigate, href,
+    beforeLeave: navigation.beforeLeave,
     link: () => null, // no other modules standalone
     lang: document.documentElement.lang,
   };
@@ -41,9 +42,8 @@ function TopBar({ path }) {
   const active = (manifest.nav || [])
     .filter(i => path === i.path || (i.path !== '/' && path.startsWith(i.path + '/')))
     .sort((a, b) => b.path.length - a.path.length)[0];
-  return html`
-    <a class="brand" href="#/"><span class="brand-mark">◆</span>${manifest.title}</a>
-    <nav>${(manifest.nav || []).map(i => html`<a class=${`nav-link ${i === active ? 'active' : ''}`} href=${href(i.path)}>${i.title}</a>`)}</nav>`;
+  const items = (manifest.nav || []).map(i => ({ href: href(i.path), title: i.title, active: i === active }));
+  return html`<${Navbar} brand=${manifest.title} mark="◆" items=${items} />`;
 }
 
 const topbar = document.getElementById('topbar');
@@ -55,6 +55,5 @@ const update = () => {
   render(html`<${TopBar} path=${ctx.path} />`, topbar);
   instance.update(ctx);
 };
-addEventListener('hashchange', update);
-addEventListener('popstate', update);
+addEventListener('panel:routechange', update);
 update();

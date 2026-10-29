@@ -71,6 +71,14 @@
   text-overflow: ellipsis;
 }
 
+/* Optional landmark around the menu. */
+.sidebar-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .sidebar .menu {
   min-height: 0;
   overflow-y: auto;
@@ -89,6 +97,17 @@
   padding: 0.25em;
 }
 
+
+/* Pinned below the menu, e.g. a sign-out button. */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.sidebar-brand-mark {
+  flex: none;
+  color: var(--color-primary);
+}
 
 @media screen and (max-width: 768px) {
   /* mobile mode */
@@ -136,7 +155,9 @@
     display: none;
   }
 
-  .sidebar-open .menu>li>a>span {
+  .sidebar-open .menu>li>a>span,
+  .sidebar-open .menu-heading,
+  .sidebar-open .sidebar-footer span {
     display: none;
   }
 

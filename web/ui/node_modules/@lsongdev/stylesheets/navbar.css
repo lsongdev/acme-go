@@ -72,3 +72,23 @@
 .navbar nav form > .button {
   margin-top: 0;
 }
+
+/* Narrow screens: the brand keeps its row and the links scroll on a row
+   of their own. */
+@media screen and (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    overflow: visible;
+    row-gap: 8px;
+    padding-top: 12px;
+  }
+
+  .navbar nav,
+  .navbar nav:last-of-type {
+    flex-basis: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 10px;
+  }
+}

@@ -106,12 +106,35 @@
 }
 
 .menu-vertical a {
-  font-size: 15px;
-  padding: 12px;
-  margin: 10px 0;
-  padding-left: 30px;
-  border-radius: 12px;
-  /* color: #333; */
+  font-size: var(--menu-vertical-font-size, 15px);
+  padding: var(--menu-vertical-item-padding, 12px 12px 12px 30px);
+  margin: var(--menu-vertical-item-margin, 10px 0);
+  border-radius: var(--menu-vertical-item-radius, 12px);
+}
+
+/* A group heading between the items of a vertical menu:
+   <li class="menu-heading">Docker</li> */
+.menu-heading {
+  padding: var(--menu-heading-padding, 12px 12px 4px);
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.menu-heading:first-child {
+  padding-top: 0;
+}
+
+/* A count or status at the end of an item. */
+.menu-badge {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
 }
 
 /* Submenu (horizontal) */

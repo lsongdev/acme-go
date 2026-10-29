@@ -72,3 +72,27 @@
   display: flex;
   gap: 6px;
 }
+
+/* A titled group of fields on a settings page:
+   <fieldset class="form-section"><legend>Listeners</legend>…</fieldset> */
+.form-section {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.form-section > legend {
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.form-section-help {
+  margin: 0;
+  color: var(--color-text-muted);
+}
