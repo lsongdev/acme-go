@@ -3,7 +3,7 @@
   "private": true,
   "description": "Browser dependencies of this UI. node_modules is committed (npm ci output) so the Go module embeds it; make check-deps verifies it matches the lockfile.",
   "dependencies": {
-    "@lsongdev/scripts": "0.1.0-rc.5",
+    "@lsongdev/scripts": "0.1.0-rc.6",
     "@lsongdev/stylesheets": "1.3.0"
   }
 }
