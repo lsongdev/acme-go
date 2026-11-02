@@ -5,7 +5,7 @@
   /* Sidebar specific */
   --sidebar-width: 250px;
   --sidebar-collapsed-width: 76px;
-  --sidebar-mobile-open-height: min(80dvh, 620px);
+  --sidebar-mobile-open-height: 100dvh;
   --sidebar-padding: 1em;
   --sidebar-mobile-padding: 12px;
 }
@@ -124,6 +124,7 @@
   }
 
   .sidebar-open {
+    height: var(--sidebar-mobile-open-height);
     max-height: var(--sidebar-mobile-open-height);
     box-shadow: 0 16px 40px rgba(27, 31, 36, 0.14);
   }

@@ -73,7 +73,6 @@ a.card { color: inherit; display: block; }
 /* Buttons */
 .button { gap: 6px; }
 .icon-button { aspect-ratio: 1; padding-left: 0; padding-right: 0; } /* square, as tall as the controls */
-.button-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* Forms */

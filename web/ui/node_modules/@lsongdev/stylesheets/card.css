@@ -13,8 +13,14 @@
   border: var(--card-border, var(--border-width) solid var(--color-border));
   background-color: var(--card-bg, var(--color-surface));
   border-radius: var(--card-border-radius);
-  margin: 24px auto;
+  margin: var(--card-margin, 24px auto);
   box-shadow: var(--card-shadow, 0 1px 2px rgb(var(--shadow-color) / 6%), 0 1px 3px rgb(var(--shadow-color) / 8%));
+}
+
+/* Grid gap owns spacing. Document-flow card margins would narrow each
+   column and add vertical space on top of the grid's gap. */
+.grid > .card {
+  margin: 0;
 }
 
 .card.active {

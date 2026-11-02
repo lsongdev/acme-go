@@ -236,3 +236,22 @@ a.button {
   width: 1em;
   height: 1em;
 }
+
+/* Form/footer actions. Page navigation and table row actions stay content-sized. */
+.button-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 768px) {
+  .button-actions {
+    width: 100%;
+  }
+
+  .button-actions > .button {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .button-actions > .spacer {
+    display: none;
+  }
+}
