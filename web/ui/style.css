@@ -73,7 +73,8 @@ a.card { color: inherit; display: block; }
 /* Buttons */
 .button { gap: 6px; }
 .icon-button { aspect-ratio: 1; padding-left: 0; padding-right: 0; } /* square, as tall as the controls */
-.button-row { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.button-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* Forms */
 form.form { display: grid; gap: 16px; }
@@ -83,7 +84,6 @@ form.form { display: grid; gap: 16px; }
 .input.mono { font-size: var(--input-font-size); }
 textarea.input { min-height: 90px; resize: vertical; font-family: var(--mono); line-height: 1.5; }
 textarea.code { min-height: 380px; tab-size: 2; white-space: pre; }
-.form-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .toolbar .input { width: auto; flex: 1 1 200px; max-width: 360px; }
 

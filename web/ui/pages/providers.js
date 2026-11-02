@@ -28,7 +28,7 @@ function AddForm({ onDone }) {
           placeholder="https://acme.example.com/directory" />
       <//>
     </div>
-    <div class="form-actions">
+    <div class="button-actions">
       <button class="button button-primary" type="submit" disabled=${busy}>Add</button>
       <button class="button" type="button" onClick=${onDone}>Cancel</button>
     </div>

@@ -49,7 +49,7 @@ function RegisterForm({ providers, onDone }) {
       <input type="checkbox" checked=${agree} onChange=${e => setAgree(e.currentTarget.checked)} required />
       <span>I agree to the <a href=${directory.terms_of_service} target="_blank" rel="noopener noreferrer">terms of service</a></span>
     </label>` : null}
-    <div class="form-actions">
+    <div class="button-actions">
       <button class="button button-primary" type="submit"
         disabled=${submit.busy || lookup.busy || !directory || directory.external_account_required || (needsTerms && !agree)}>
         ${submit.busy ? 'Registering…' : 'Register'}
@@ -90,7 +90,7 @@ export default function Accounts() {
           <td><${Status} status=${a.status} /></td>
           <td class="mono truncate" style="max-width:280px" title=${a.url}>${a.url}</td>
           <td class="nowrap">${formatDate(a.created_at, true)}</td>
-          <td class="actions"><span class="button-row">
+          <td class="actions"><span class="row-actions">
             ${a.status === 'valid' ? html`<button class="button button-small" onClick=${() => deactivate(a)} disabled=${action.busy}>Deactivate</button>` : null}
             <button class="button button-small button-danger" onClick=${() => remove(a)} disabled=${action.busy}>Delete</button>
           </span></td>
