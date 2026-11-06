@@ -1,6 +1,6 @@
-import { html } from '@lsongdev/panel/html.js';
+import { html } from '../lib/html.js';
 import { PageHeader, Alert, Loading, Empty, Table } from '@lsongdev/scripts/react/components/index.js';
-import { usePanel } from '@lsongdev/panel/panel.js';
+import { usePanel } from '../lib/panel.js';
 import { useApi, Link, Status, Domains, Expiry, CHALLENGES } from '../acme.js';
 
 export default function Certificates() {

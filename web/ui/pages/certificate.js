@@ -1,7 +1,7 @@
-import { html, useState } from '@lsongdev/panel/html.js';
-import { useAction } from '@lsongdev/panel/hooks.js';
+import { html, useState } from '../lib/html.js';
+import { useAction } from '../lib/hooks.js';
 import { PageHeader, Alert, Loading, Field, KeyValue, CopyButton, Table } from '@lsongdev/scripts/react/components/index.js';
-import { usePanel } from '@lsongdev/panel/panel.js';
+import { usePanel } from '../lib/panel.js';
 import { useApi, Link, Status, Expiry, formatDate, stepLabel, unfinished, CHALLENGES } from '../acme.js';
 
 // RFC 5280 revocation reasons accepted by ACME CAs.

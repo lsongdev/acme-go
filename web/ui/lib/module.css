@@ -1,0 +1,110 @@
+/* The styles every panel module shares: the parts of @lsongdev/stylesheets
+   the modules use (from the node_modules beside this runtime), and the
+   modules' common layout conventions. The shell loads this into each
+   module's shadow root before the module's own styles; a standalone module
+   links it from its index.html. Theme tokens come from the hosting document. */
+@import url(../node_modules/@lsongdev/stylesheets/base.css);
+@import url(../node_modules/@lsongdev/stylesheets/card.css);
+@import url(../node_modules/@lsongdev/stylesheets/input.css);
+@import url(../node_modules/@lsongdev/stylesheets/button.css);
+@import url(../node_modules/@lsongdev/stylesheets/table.css);
+@import url(../node_modules/@lsongdev/stylesheets/pagination.css);
+@import url(../node_modules/@lsongdev/stylesheets/badge.css);
+@import url(../node_modules/@lsongdev/stylesheets/alert.css);
+@import url(../node_modules/@lsongdev/stylesheets/dialog.css);
+@import url(../node_modules/@lsongdev/stylesheets/page.css);
+@import url(../node_modules/@lsongdev/stylesheets/field.css);
+@import url(../node_modules/@lsongdev/stylesheets/switch.css);
+@import url(../node_modules/@lsongdev/stylesheets/progressbar.css);
+@import url(../node_modules/@lsongdev/stylesheets/tabs.css);
+@import url(../node_modules/@lsongdev/stylesheets/key-value.css);
+@import url(../node_modules/@lsongdev/stylesheets/spinner.css);
+@import url(../node_modules/@lsongdev/stylesheets/log.css);
+@import url(../node_modules/@lsongdev/stylesheets/toast.css);
+@import url(../node_modules/@lsongdev/stylesheets/theme/light.css);
+@import url(../node_modules/@lsongdev/stylesheets/theme/dark.css);
+
+/* Spacing is the pages' own (see Cards below), so components add none. */
+:root, :host {
+  --card-margin: 0;
+  --alert-margin: 0 0 14px;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+:host { display: block; color: var(--color-text); font-family: var(--font-family); font-size: var(--font-size); line-height: var(--line-height); }
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0; line-height: 1.3; }
+code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+.muted { color: var(--color-text-muted); }
+.spacer { flex: 1; }
+.nowrap { white-space: nowrap; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Sections: 24px above a block marked .section, and its heading. */
+.section { margin-top: 24px; }
+.section > h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+
+/* Cards and grids: 16px between consecutive cards and grids. */
+:is(.card, .grid, .grid-2) + :is(.card, .grid, .grid-2) { margin-top: 16px; }
+:is(.card, .grid, .grid-2).section { margin-top: 24px; }
+:is(.grid, .grid-2) > .card { margin-top: 0; }
+.card h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; }
+.stat { display: flex; flex-direction: column; gap: 4px; }
+.stat-value { font-size: 26px; font-weight: 650; }
+.stat-label { color: var(--color-text-muted); }
+.stat-sub { color: var(--color-text-muted); font-size: 12.5px; }
+a.card { display: block; color: inherit; }
+a.card:hover { border-color: var(--color-primary); text-decoration: none; }
+.card.stat { display: flex; }
+
+/* Buttons */
+.icon-button { aspect-ratio: 1; padding-left: 0; padding-right: 0; } /* square, as tall as the controls */
+.row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Forms */
+form.form { display: grid; gap: 16px; }
+.settings-form { max-width: 960px; }
+.form-fields { display: grid; gap: 24px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.form-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+/* Fields keep the control size (16px) even in monospace: smaller text
+   makes iOS zoom into a focused field. */
+.input.mono { font-size: var(--input-font-size); }
+textarea.input { min-height: 90px; resize: vertical; font-family: var(--font-mono); line-height: 1.5; }
+textarea.code { min-height: 380px; tab-size: 2; white-space: pre; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar .input { width: auto; flex: 1 1 200px; max-width: 360px; }
+
+/* Tables (the Table component scrolls them sideways) */
+.table .actions { text-align: right; white-space: nowrap; }
+.cell-main { font-weight: 550; overflow-wrap: anywhere; }
+.cell-sub { color: var(--color-text-muted); font-size: 12.5px; overflow-wrap: anywhere; }
+
+/* States */
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.alert { overflow-wrap: anywhere; }
+.empty { padding: 40px 16px; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
+
+/* Logs */
+.dialog .log { --log-height: min(60vh, 520px); }
+
+/* Meters */
+.meter { height: 6px; background: var(--color-surface-subtle); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+.meter > span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; transition: width .4s; }
+.spark { width: 100%; height: 48px; margin-top: 8px; color: var(--color-primary); }
+
+/* Dialogs */
+.dialog-wide { --dialog-width: 900px; }
+.dialog-header h2 { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
