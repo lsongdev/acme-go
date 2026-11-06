@@ -1,3 +1,4 @@
+// Copied from github.com/lsongdev/ohmyserver/panel/ui; change it there and copy it back.
 export function bytes(n) {
   if (n == null || isNaN(n)) return '—';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];

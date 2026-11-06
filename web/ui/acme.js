@@ -1,9 +1,9 @@
 // ACME-specific UI helpers: API access, statuses, issuance steps and
-// certificate formatting. Generic components are in lib/.
-import { html } from './lib/html.js';
-import { useResource } from './lib/hooks.js';
-import { usePanel } from './lib/panel.js';
-import { Status as ShellStatus } from './lib/ui.js';
+// certificate formatting. Generic components come from @lsongdev/panel.
+import { html } from '@lsongdev/panel/html.js';
+import { useResource } from '@lsongdev/panel/hooks.js';
+import { usePanel } from '@lsongdev/panel/panel.js';
+import { Status as ShellStatus } from '@lsongdev/panel/ui.js';
 
 // useApi loads a GET endpoint of this module, polling every interval(data)
 // milliseconds while that returns a positive number.

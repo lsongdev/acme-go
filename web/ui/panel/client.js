@@ -1,3 +1,4 @@
+// Copied from github.com/lsongdev/ohmyserver/panel/ui; change it there and copy it back.
 // HTTP client for a module's API. The shell creates one per module with the
 // module's base path, so module code only ever uses relative paths.
 

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>总览 — CSS Components</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="stylesheet" href="../section.css">
+  <link rel="stylesheet" href="../progressbar.css">
+  <link rel="stylesheet" href="../theme/light.css">
+  <link rel="stylesheet" href="../theme/dark.css">
+  <link rel="stylesheet" href="../theme/google.css">
+  <link rel="stylesheet" href="../theme/pink.css">
+  <link rel="stylesheet" href="./demo.css">
+</head>
+<body>
+  <header class="demo-header">
+    <div>
+      <h1>CSS Components</h1>
+      <p class="demo-subtitle">基于语义令牌（CSS 自定义属性）的轻量组件库 — 总览</p>
+    </div>
+    <div class="demo-toolbar" role="group" aria-label="主题">
+      <button class="button button-small" type="button" data-set-theme="light">亮色</button>
+      <button class="button button-small" type="button" data-set-theme="dark">暗色</button>
+      <button class="button button-small" type="button" data-set-theme="google">谷歌</button>
+      <button class="button button-small" type="button" data-set-theme="pink">粉红</button>
+    </div>
+  </header>
+
+  <main class="demo-main">
+    <p class="lead">
+      库入口为 <code class="demo-code">index.css</code>，它按顺序导入 base、grid、card、flex、list、form、
+      menu、input、button、select、switch、utils、table、badge、dropdown、navbar、dialog、details、stats、alert。
+      主题通过 <code class="demo-code">&lt;html data-theme="..."&gt;</code> 显式开启，右侧工具栏可即时切换。
+    </p>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat-value">20+</span>
+        <span class="stat-label">index.css 导入的组件文件</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">4</span>
+        <span class="stat-label">内置主题（亮色 / 暗色 / 谷歌 / 粉红）</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">0</span>
+        <span class="stat-label">运行时 JS 依赖（演示页除外）</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">快速上手</span>
+        <a href="./tokens.html" target="_blank" rel="noopener">查看令牌 →</a>
+      </div>
+      <div class="section-body">
+        <p>引入入口样式与一个主题，然后在 <code class="demo-code">&lt;html&gt;</code> 上声明主题即可：</p>
+        <pre class="demo-pre"><code>&lt;link rel="stylesheet" href="index.css"&gt;
+&lt;link rel="stylesheet" href="theme/light.css"&gt;
+&lt;html data-theme="light"&gt;</code></pre>
+        <p>只在某个子树内生效也是可以的——把 <code class="demo-code">data-theme</code> 放在任意元素上。</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">组件速览</span>
+      </div>
+      <div class="section-body">
+        <div class="demo-row">
+          <button class="button button-primary" type="button">按钮</button>
+          <a class="button button-link" href="#">链接按钮</a>
+          <span class="badge badge-info">徽章</span>
+          <span class="badge badge-success">成功</span>
+          <div class="alert alert-success">操作成功</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 65%"></div></div>
+        </div>
+      </div>
+      <div class="section-footer">
+        <a href="./overview.html">回到顶部</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">模块索引</span>
+      </div>
+      <div class="section-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>分类</th>
+              <th>组件</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="2">布局</td><td><a href="./flex.html" target="_blank" rel="noopener">flex.html</a></td><td>Flex 布局工具</td></tr>
+            <tr><td><a href="./grid.html" target="_blank" rel="noopener">grid.html</a></td><td>Grid 栅格系统</td></tr>
+            <tr><td rowspan="4">表单</td><td><a href="./button.html" target="_blank" rel="noopener">button.html</a></td><td>按钮与按钮链接</td></tr>
+            <tr><td><a href="./input.html" target="_blank" rel="noopener">input.html</a></td><td>输入框与帮助文本</td></tr>
+            <tr><td><a href="./form.html" target="_blank" rel="noopener">form.html</a></td><td>表单、下拉与开关</td></tr>
+            <tr><td><a href="./checkbox.html" target="_blank" rel="noopener">checkbox.html</a></td><td>开关（Switch）</td></tr>
+            <tr><td rowspan="3">导航</td><td><a href="./navigation.html" target="_blank" rel="noopener">navigation.html</a></td><td>导航栏（navbar）</td></tr>
+            <tr><td><a href="./menu.html" target="_blank" rel="noopener">menu.html</a></td><td>菜单、下拉与右键菜单</td></tr>
+            <tr><td><a href="./dropdown.html" target="_blank" rel="noopener">dropdown.html</a></td><td>下拉菜单</td></tr>
+            <tr><td rowspan="6">展示</td><td><a href="./card.html" target="_blank" rel="noopener">card.html</a></td><td>卡片</td></tr>
+            <tr><td><a href="./list.html" target="_blank" rel="noopener">list.html</a></td><td>列表</td></tr>
+            <tr><td><a href="./link.html" target="_blank" rel="noopener">link.html</a></td><td>链接</td></tr>
+            <tr><td><a href="./badge.html" target="_blank" rel="noopener">badge.html</a></td><td>徽章与计数</td></tr>
+            <tr><td><a href="./icon.html" target="_blank" rel="noopener">icon.html</a></td><td>图标（Font Awesome）</td></tr>
+            <tr><td><a href="./dialog.html" target="_blank" rel="noopener">dialog.html</a></td><td>对话框（原生 dialog）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="./demo.js"></script>
+</body>
+</html>

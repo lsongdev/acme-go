@@ -1,0 +1,275 @@
+/* Shared styles for the CSS Components example pages */
+body {
+  margin: 0;
+  padding: 0 0 96px;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+}
+
+/* Page header with theme switcher */
+.demo-header {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 28px;
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+.demo-header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.demo-header .demo-subtitle {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.demo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.demo-toolbar .button.active {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Content column */
+.demo-main {
+  width: min(100% - 32px, 980px);
+  margin: 24px auto 0;
+}
+
+.demo-main > p.lead {
+  color: var(--color-text-muted);
+}
+
+/* Section cards */
+.demo-section {
+  margin: 20px 0;
+  padding: 20px 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.demo-section > h2 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 650;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.demo-section > h3 {
+  margin: 20px 0 10px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.demo-block {
+  margin: 14px 0;
+}
+
+.demo-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.demo-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* Code labels */
+.demo-code {
+  display: inline-block;
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--color-surface-subtle);
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+pre.demo-pre {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Flex/grid demo blocks */
+.demo-visual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.demo-visual > * {
+  min-width: 48px;
+}
+
+.demo-tile {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: 6px;
+}
+
+.demo-tile:nth-child(3n + 2) {
+  background: var(--color-success);
+}
+
+.demo-tile:nth-child(3n) {
+  background: var(--color-warning);
+}
+
+.demo-tile.is-muted {
+  background: var(--color-text-muted);
+}
+
+.demo-tile.is-outline {
+  color: var(--color-primary);
+  background: transparent;
+  border: 2px dashed var(--color-primary);
+}
+
+/* Swatches */
+.demo-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.demo-swatch {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.demo-swatch-box {
+  height: 64px;
+}
+
+.demo-swatch-info {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.demo-swatch-name {
+  font-weight: 600;
+}
+
+.demo-swatch-value {
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+/* Theme preview panes (tokens demo) */
+.theme-preview {
+  flex: 1;
+  min-width: 260px;
+  padding: 18px;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.theme-preview h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.theme-preview .input {
+  margin: 4px 0 12px;
+}
+
+/* Global override: every component inside this scope follows the brand. */
+.brand-scope {
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-focus: #8b5cf6;
+}
+
+/* Component override: global colors stay unchanged; only inputs differ. */
+.compact-inputs {
+  --input-padding: 6px 9px;
+  --input-border-radius: 999px;
+  --input-bg: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+}
+
+/* menu.css chevrons reference "Font Awesome 5 Free"; make them work with FA 6 */
+.menu-vertical li:has(> ul) > a::after {
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+}
+
+/* Native dialog content scaffolding (dialog.css leaves content unstyled) */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.dialog-body {
+  padding: 18px;
+}
+
+.dialog-body p {
+  margin: 0 0 10px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border);
+}

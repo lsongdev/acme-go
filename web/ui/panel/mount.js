@@ -1,3 +1,4 @@
+// Copied from github.com/lsongdev/ohmyserver/panel/ui; change it there and copy it back.
 // createMount implements the module contract's mount(el, ctx) for a table of
 // routes: it matches ctx.path, lazy-loads the page, and gives it the page
 // context (as props and through usePanel). Dialogs and toasts render inside
@@ -51,12 +52,12 @@ export function createMount({ routes, api: wrap, envelope = true }) {
     }
     const props = match && {
       api, client, params: match.params, query: ctx.query,
-      navigate: ctx.navigate, href: ctx.href, link: ctx.link,
+      navigate: ctx.navigate, href: ctx.href, link: ctx.link, beforeLeave: ctx.beforeLeave,
       // Filters live in the query string so views are shareable.
       setQuery: patch => ctx.navigate(ctx.path + search({ ...ctx.query, ...patch }), { replace: true }),
     };
     return html`<div class="module-root">
-      ${match ? html`<${Lazy} key=${match.route.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Notice}>Page not found<//>`}
+      ${match ? html`<${Lazy} key=${ctx.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Notice}>Page not found<//>`}
       <${DialogHost} />
       <${Toaster} />
     </div>`;
