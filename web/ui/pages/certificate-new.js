@@ -1,6 +1,6 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Field } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Field } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, Link } from '../acme.js';
 
@@ -33,10 +33,10 @@ export default function NewCertificate() {
   };
 
   const back = { href: href('/certificates'), label: 'Certificates' };
-  if (accounts.data === undefined && !accounts.error) return html`<${Page} title="Request certificate" back=${back}><${Loading} /><//>`;
-  return html`<${Page} title="Request certificate" back=${back}>
-    <${Notice} error=${accounts.error || error} />
-    ${valid.length === 0 ? html`<${Notice} tone="warn">No usable ACME account. <${Link} to="/accounts">Register one<//> first.<//>` : null}
+  if (accounts.data === undefined && !accounts.error) return html`<${PageHeader} title="Request certificate" back=${back} /><${Loading} />`;
+  return html`<${PageHeader} title="Request certificate" back=${back} />
+    <${Alert} error=${accounts.error || error} />
+    ${valid.length === 0 ? html`<${Alert} variant="warning">No usable ACME account. <${Link} to="/accounts">Register one<//> first.<//>` : null}
     <form class="card form" onSubmit=${submit}>
       <${Field} label="Domains" required hint="One per line, or separated by commas or spaces. The first is the certificate's common name (CN).">
         <textarea class="input" rows="4" required placeholder=${'example.com\nwww.example.com'} value=${domains}
@@ -70,6 +70,5 @@ export default function NewCertificate() {
         </button>
         <a class="button" href=${href('/certificates')}>Cancel</a>
       </div>
-    </form>
-  <//>`;
+    </form>`;
 }

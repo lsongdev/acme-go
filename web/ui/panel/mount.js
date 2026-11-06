@@ -6,7 +6,7 @@
 import { html, render, useEffect, useState } from './html.js';
 import { createClient } from './client.js';
 import { PanelContext } from './panel.js';
-import { DialogHost, Toaster, Notice, Loading } from './ui.js';
+import { Alert, DialogHost, Toaster, Loading } from '@lsongdev/scripts/react/components/index.js';
 
 // compile turns "/containers/:id" into a matcher that returns params.
 function compile(pattern) {
@@ -31,7 +31,7 @@ function Lazy({ route, loaded, props }) {
     if (mod) return;
     route.load().then(m => { loaded.set(route, m); force(n => n + 1); }).catch(setError);
   }, [route]);
-  if (error) return html`<${Notice} error=${error} />`;
+  if (error) return html`<${Alert} error=${error} />`;
   if (!mod) return html`<${Loading} />`;
   const Page = mod.default;
   return html`<${PanelContext.Provider} value=${props}><${Page} ...${props} /><//>`;
@@ -57,7 +57,7 @@ export function createMount({ routes, api: wrap, envelope = true }) {
       setQuery: patch => ctx.navigate(ctx.path + search({ ...ctx.query, ...patch }), { replace: true }),
     };
     return html`<div class="module-root">
-      ${match ? html`<${Lazy} key=${ctx.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Notice}>Page not found<//>`}
+      ${match ? html`<${Lazy} key=${ctx.path} route=${match.route} loaded=${loaded} props=${props} />` : html`<${Alert} variant="warning">Page not found<//>`}
       <${DialogHost} />
       <${Toaster} />
     </div>`;

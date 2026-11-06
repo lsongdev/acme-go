@@ -1,5 +1,5 @@
 import { html } from '@lsongdev/panel/html.js';
-import { Page, Notice, Loading, Empty, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Empty, Table } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, Link, Status, Domains, Expiry, CHALLENGES } from '../acme.js';
 
@@ -7,8 +7,8 @@ export default function Certificates() {
   const { href } = usePanel();
   // Refresh while any certificate is still being issued for the first time.
   const { data, error } = useApi('/certificates', items => items?.some(c => c.status === 'pending') ? 3000 : 0);
-  return html`<${Page} title="Certificates" actions=${html`<a class="button button-primary" href=${href('/certificates/new')}>Request certificate</a>`}>
-    <${Notice} error=${error} />
+  return html`<${PageHeader} title="Certificates" actions=${html`<a class="button button-primary" href=${href('/certificates/new')}>Request certificate</a>`} />
+    <${Alert} error=${error} />
     ${data === undefined ? (error ? null : html`<${Loading} />`) : data.length === 0 ? html`
       <${Empty}>
         <p>No certificates yet.</p>
@@ -24,6 +24,5 @@ export default function Certificates() {
           <td>${CHALLENGES[c.challenge_type] || c.challenge_type}</td>
           <td>${c.auto_renew ? 'On' : html`<span class="muted">Off</span>`}</td>
         </tr>`)}</tbody>
-      <//>`}
-  <//>`;
+      <//>`}`;
 }

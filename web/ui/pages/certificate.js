@@ -1,6 +1,6 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Field, KV, CopyButton, confirmDanger, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Field, KeyValue, CopyButton, Table } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, Link, Status, Expiry, formatDate, stepLabel, unfinished, CHALLENGES } from '../acme.js';
 
@@ -26,9 +26,8 @@ export default function Certificate({ params: { id } }) {
   const c = certificate.data;
   const back = { href: href('/certificates'), label: 'Certificates' };
   if (!c) {
-    return html`<${Page} title="Certificate" back=${back}>
-      ${certificate.error ? html`<${Notice} error=${certificate.error} />` : html`<${Loading} />`}
-    <//>`;
+    return html`<${PageHeader} title="Certificate" back=${back} />
+      ${certificate.error ? html`<${Alert} error=${certificate.error} />` : html`<${Loading} />`}`;
   }
 
   const reload = () => { certificate.reload(); issuances.reload(); };
@@ -47,27 +46,27 @@ export default function Certificate({ params: { id } }) {
     reload();
   });
   const remove = () => {
-    if (!confirmDanger(`Delete the certificate ${c.domains[0]}? The certificate and its private key are deleted for good.`)) return;
+    if (!window.confirm(`Delete the certificate ${c.domains[0]}? The certificate and its private key are deleted for good.`)) return;
     action.run(async () => {
       await api.del(`/certificates/${c.id}`);
       navigate('/certificates');
     });
   };
 
-  return html`<${Page} title=${html`<span class="mono">${c.domains[0]}</span>`} back=${back} actions=${html`
+  return html`<${PageHeader} title=${html`<span class="mono">${c.domains[0]}</span>`} back=${back} actions=${html`
       ${c.status !== 'revoked' ? html`
         <button class="button button-primary" onClick=${renew} disabled=${action.busy || busyIssuing}>
           ${c.status === 'active' ? 'Renew now' : 'Issue again'}
         </button>` : null}
       ${c.cert_pem ? html`<a class="button" href=${download('zip')} download>Download</a>` : null}
-      `}>
-    <${Notice} error=${action.error || certificate.error} />
-    ${busyIssuing ? html`<${Notice} tone="info">
+      `} />
+    <${Alert} error=${action.error || certificate.error} />
+    ${busyIssuing ? html`<${Alert} variant="info">
       Issuing: <${Link} to=${`/issuances/${issuances.data.find(unfinished).id}`}>view progress<//>
     <//>` : null}
 
     <div class="card">
-      <${KV} items=${[
+      <${KeyValue} items=${[
         ['Status', html`<${Status} status=${c.status} />`],
         ['Domains', c.domains.map(d => html`<div class="mono">${d}</div>`)],
         ['Expires', html`<${Expiry} value=${c.not_after} />`],
@@ -140,6 +139,5 @@ export default function Certificate({ params: { id } }) {
         <div><strong>Delete the certificate</strong><p class="muted">Delete the certificate, its private key and issuances. This does not revoke it.</p></div>
         <button class="button button-danger" onClick=${remove} disabled=${action.busy || busyIssuing}>Delete</button>
       </div>
-    </div>
-  <//>`;
+    </div>`;
 }

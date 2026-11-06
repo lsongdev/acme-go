@@ -1,6 +1,6 @@
 import { html, useEffect, useState } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Empty, Field, confirmDanger, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Empty, Field, Table } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, Status, formatDate } from '../acme.js';
 
@@ -32,7 +32,7 @@ function RegisterForm({ providers, onDone }) {
 
   return html`<form class="card form" onSubmit=${register}>
     <h2>Register an account</h2>
-    <${Notice} error=${lookup.error || submit.error} />
+    <${Alert} error=${lookup.error || submit.error} />
     <div class="form-grid">
       <${Field} label="Provider" required>
         <select class="input" value=${providerID} onChange=${e => setProviderID(e.currentTarget.value)} required>
@@ -44,7 +44,7 @@ function RegisterForm({ providers, onDone }) {
       <//>
     </div>
     ${lookup.busy ? html`<p class="muted">Reading the provider…</p>` : null}
-    ${directory?.external_account_required ? html`<${Notice} tone="warn">This provider requires external account binding (EAB), which is not supported yet.<//>` : null}
+    ${directory?.external_account_required ? html`<${Alert} variant="warning">This provider requires external account binding (EAB), which is not supported yet.<//>` : null}
     ${needsTerms ? html`<label class="field-check">
       <input type="checkbox" checked=${agree} onChange=${e => setAgree(e.currentTarget.checked)} required />
       <span>I agree to the <a href=${directory.terms_of_service} target="_blank" rel="noopener noreferrer">terms of service</a></span>
@@ -67,18 +67,18 @@ export default function Accounts() {
   const [registering, setRegistering] = useState(false);
 
   const deactivate = account => {
-    if (!confirmDanger(`Deactivate the account ${account.email || '#' + account.id} at ${account.provider_name}? This cannot be undone, and the account can no longer issue certificates.`)) return;
+    if (!window.confirm(`Deactivate the account ${account.email || '#' + account.id} at ${account.provider_name}? This cannot be undone, and the account can no longer issue certificates.`)) return;
     action.run(async () => { await api.post(`/accounts/${account.id}/deactivate`); accounts.reload(); });
   };
   const remove = account => {
-    if (!confirmDanger(`Delete the account ${account.email || '#' + account.id} here? Its private key is deleted; the account at the CA is unaffected.`)) return;
+    if (!window.confirm(`Delete the account ${account.email || '#' + account.id} here? Its private key is deleted; the account at the CA is unaffected.`)) return;
     action.run(async () => { await api.del(`/accounts/${account.id}`); accounts.reload(); });
   };
 
   const data = accounts.data;
-  return html`<${Page} title="Accounts" actions=${registering ? null : html`
-      <button class="button button-primary" onClick=${() => setRegistering(true)} disabled=${!providers.data?.length}>Register account</button>`}>
-    <${Notice} error=${accounts.error || providers.error || action.error} />
+  return html`<${PageHeader} title="Accounts" actions=${registering ? null : html`
+      <button class="button button-primary" onClick=${() => setRegistering(true)} disabled=${!providers.data?.length}>Register account</button>`} />
+    <${Alert} error=${accounts.error || providers.error || action.error} />
     ${registering && providers.data ? html`<${RegisterForm} providers=${providers.data} onDone=${() => { setRegistering(false); accounts.reload(); }} />` : null}
     ${data === undefined ? (accounts.error ? null : html`<${Loading} />`) : data.length === 0 ? html`
       <${Empty}><p>No ACME accounts yet.</p><p class="muted">Register an account with a provider before issuing certificates.</p><//>` : html`
@@ -95,6 +95,5 @@ export default function Accounts() {
             <button class="button button-small button-danger" onClick=${() => remove(a)} disabled=${action.busy}>Delete</button>
           </span></td>
         </tr>`)}</tbody>
-      <//></div>`}
-  <//>`;
+      <//></div>`}`;
 }

@@ -1,6 +1,6 @@
 import { html } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, KV, CopyButton, confirmDanger, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, KeyValue, CopyButton, Table } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, Link, Status, formatDate, STEPS, unfinished, CHALLENGES } from '../acme.js';
 
@@ -54,9 +54,8 @@ export default function Issuance({ params: { id } }) {
   const action = useAction();
   const back = { href: href('/issuances'), label: 'Issuances' };
   if (!issuance) {
-    return html`<${Page} title=${`Issuance #${id}`} back=${back}>
-      ${error ? html`<${Notice} error=${error} />` : html`<${Loading} />`}
-    <//>`;
+    return html`<${PageHeader} title=${`Issuance #${id}`} back=${back} />
+      ${error ? html`<${Alert} error=${error} />` : html`<${Loading} />`}`;
   }
 
   const resume = force => action.run(async () => {
@@ -64,20 +63,20 @@ export default function Issuance({ params: { id } }) {
     reload();
   });
   const cancel = () => {
-    if (!confirmDanger('Cancel this issuance?')) return;
+    if (!window.confirm('Cancel this issuance?')) return;
     action.run(async () => {
       await api.post(`/issuances/${id}/cancel`);
       reload();
     });
   };
 
-  return html`<${Page} title=${`Issuance #${issuance.id}`} back=${back} actions=${html`
+  return html`<${PageHeader} title=${`Issuance #${issuance.id}`} back=${back} actions=${html`
       <a class="button" href=${href(`/certificates/${issuance.certificate_id}`)}>View certificate</a>
       ${unfinished(issuance) ? html`<button class="button button-danger" onClick=${cancel} disabled=${action.busy}>Cancel issuance</button>` : null}
-      `}>
-    <${Notice} error=${action.error} />
+      `} />
+    <${Alert} error=${action.error} />
     <div class="card">
-      <${KV} items=${[
+      <${KeyValue} items=${[
         ['Status', html`<${Status} status=${issuance.status} />`],
         ['Domains', issuance.domains.map(d => html`<div class="mono">${d}</div>`)],
         ['Challenge', CHALLENGES[issuance.challenge_type] || issuance.challenge_type],
@@ -88,9 +87,8 @@ export default function Issuance({ params: { id } }) {
         ...(issuance.order_url ? [['Order', html`<span class="mono" style="overflow-wrap:anywhere">${issuance.order_url}</span>`]] : []),
       ]} />
       <${Steps} issuance=${issuance} />
-      ${issuance.error ? html`<div style="margin-top:14px"><${Notice} tone=${['waiting', 'retrying'].includes(issuance.status) ? 'warn' : 'error'}>${issuance.error}<//></div>` : null}
-      ${issuance.status === 'succeeded' ? html`<div style="margin-top:14px"><${Notice} tone="info">The certificate was issued. <${Link} to=${`/certificates/${issuance.certificate_id}`}>View and download<//><//></div>` : null}
+      ${issuance.error ? html`<div style="margin-top:14px"><${Alert} variant=${['waiting', 'retrying'].includes(issuance.status) ? 'warning' : 'danger'}>${issuance.error}<//></div>` : null}
+      ${issuance.status === 'succeeded' ? html`<div style="margin-top:14px"><${Alert} variant="info">The certificate was issued. <${Link} to=${`/certificates/${issuance.certificate_id}`}>View and download<//><//></div>` : null}
     </div>
-    ${issuance.dns_records?.length > 0 ? html`<${DNSRecords} issuance=${issuance} onContinue=${resume} busy=${action.busy} />` : null}
-  <//>`;
+    ${issuance.dns_records?.length > 0 ? html`<${DNSRecords} issuance=${issuance} onContinue=${resume} busy=${action.busy} />` : null}`;
 }

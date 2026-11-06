@@ -1,11 +1,11 @@
 import { html } from '@lsongdev/panel/html.js';
-import { Page, Notice, Loading, Empty, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Empty, Table } from '@lsongdev/scripts/react/components/index.js';
 import { useApi, Link, Status, Domains, formatDate, stepLabel, unfinished, CHALLENGES } from '../acme.js';
 
 export default function Issuances() {
   const { data, error } = useApi('/issuances', items => items?.some(unfinished) ? 3000 : 0);
-  return html`<${Page} title="Issuances">
-    <${Notice} error=${error} />
+  return html`<${PageHeader} title="Issuances" />
+    <${Alert} error=${error} />
     ${data === undefined ? (error ? null : html`<${Loading} />`) : data.length === 0 ? html`<${Empty}>No issuances yet.<//>` : html`
       <${Table}>
         <thead><tr><th>#</th><th>Domains</th><th>Status</th><th>Step</th><th>Challenge</th><th>Started</th><th>Attempts</th><th>Next retry</th><th>Error</th></tr></thead>
@@ -20,6 +20,5 @@ export default function Issuances() {
           <td>${formatDate(i.next_attempt_at, true)}</td>
           <td class="error-cell" title=${i.error}>${i.error || ''}</td>
         </tr>`)}</tbody>
-      <//>`}
-  <//>`;
+      <//>`}`;
 }

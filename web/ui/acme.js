@@ -20,26 +20,26 @@ export function Link({ to, children, ...props }) {
 
 const STATUS = {
   // certificates
-  pending: ['Issuing', 'blue'],
-  active: ['Active', 'green'],
-  failed: ['Failed', 'red'],
-  revoked: ['Revoked', 'gray'],
+  pending: ['Issuing', 'info'],
+  active: ['Active', 'success'],
+  failed: ['Failed', 'danger'],
+  revoked: ['Revoked', undefined],
   // issuances
-  running: ['Running', 'blue'],
-  retrying: ['Retry scheduled', 'amber'],
-  waiting: ['Needs action', 'amber'],
-  succeeded: ['Succeeded', 'green'],
+  running: ['Running', 'info'],
+  retrying: ['Retry scheduled', 'warning'],
+  waiting: ['Needs action', 'warning'],
+  succeeded: ['Succeeded', 'success'],
   // accounts and orders
-  valid: ['Valid', 'green'],
-  deactivated: ['Deactivated', 'gray'],
-  ready: ['Ready', 'blue'],
-  processing: ['Processing', 'blue'],
-  invalid: ['Invalid', 'red'],
+  valid: ['Valid', 'success'],
+  deactivated: ['Deactivated', undefined],
+  ready: ['Ready', 'info'],
+  processing: ['Processing', 'info'],
+  invalid: ['Invalid', 'danger'],
 };
 
 export function Status({ status }) {
-  const [label, tone] = STATUS[status] || [status, 'gray'];
-  return html`<${ShellStatus} state=${status} label=${label} tone=${tone} />`;
+  const [label, variant] = STATUS[status] || [status];
+  return html`<${ShellStatus} state=${status} label=${label} variant=${variant} />`;
 }
 
 export const STEPS = [

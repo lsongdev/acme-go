@@ -1,6 +1,6 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Field, confirmDanger, Table } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Field, Table } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, formatDate } from '../acme.js';
 
@@ -18,7 +18,7 @@ function AddForm({ onDone }) {
   };
   return html`<form class="card form" onSubmit=${submit}>
     <h2>Add a provider</h2>
-    <${Notice} error=${error} />
+    <${Alert} error=${error} />
     <div class="form-grid">
       <${Field} label="Name" required>
         <input class="input" value=${name} required onInput=${e => setName(e.currentTarget.value)} placeholder="My CA" />
@@ -41,11 +41,11 @@ export default function Providers() {
   const action = useAction();
   const [adding, setAdding] = useState(false);
   const remove = provider => {
-    if (!confirmDanger(`Delete the provider ${provider.name}?`)) return;
+    if (!window.confirm(`Delete the provider ${provider.name}?`)) return;
     action.run(async () => { await api.del(`/providers/${provider.id}`); reload(); });
   };
-  return html`<${Page} title="Providers" actions=${adding ? null : html`<button class="button button-primary" onClick=${() => setAdding(true)}>Add provider</button>`}>
-    <${Notice} error=${error || action.error} />
+  return html`<${PageHeader} title="Providers" actions=${adding ? null : html`<button class="button button-primary" onClick=${() => setAdding(true)}>Add provider</button>`} />
+    <${Alert} error=${error || action.error} />
     ${adding ? html`<${AddForm} onDone=${() => { setAdding(false); reload(); }} />` : null}
     ${data === undefined ? (error ? null : html`<${Loading} />`) : html`
       <div class="section"><${Table}>
@@ -56,6 +56,5 @@ export default function Providers() {
           <td class="nowrap">${formatDate(p.created_at)}</td>
           <td class="actions"><button class="button button-small button-danger" onClick=${() => remove(p)} disabled=${action.busy}>Delete</button></td>
         </tr>`)}</tbody>
-      <//></div>`}
-  <//>`;
+      <//></div>`}`;
 }
