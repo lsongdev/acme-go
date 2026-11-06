@@ -3,7 +3,6 @@
 /*
  * A row of tabs over a bottom rule. Mark the current tab with
  * aria-selected="true" (or .active).
- * Opt-in: not part of index.css.
  *
  * <nav class="tabs" role="tablist">
  *   <button class="tab" role="tab" aria-selected="true">Logs</button>

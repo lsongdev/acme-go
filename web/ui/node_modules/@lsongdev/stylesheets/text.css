@@ -105,3 +105,16 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* Numbers that line up in columns: fixed-width digits, kept on one line. */
+.text-numeric {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* One line, cut off with an ellipsis. */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

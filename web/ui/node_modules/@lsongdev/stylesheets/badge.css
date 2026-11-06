@@ -75,3 +75,10 @@
   border-radius: 50%;
   background: currentColor;
 }
+
+/* A wrapping row of badges, such as tags. */
+.badge-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

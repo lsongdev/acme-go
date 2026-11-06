@@ -37,6 +37,7 @@
   width: 22px;
   height: 22px;
   flex: none;
+  color: var(--navbar-mark-color, var(--color-primary));
 }
 
 .navbar nav {

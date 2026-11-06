@@ -31,6 +31,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--button-gap, 6px);
   box-sizing: border-box;
   /* min-width: 70px; */
   padding: var(--button-padding-y) var(--button-padding-x);
@@ -219,6 +220,12 @@ a.button {
 
 .button-group .button:not(:last-child) {
   border-right: 1px solid var(--button-border-color, var(--color-border));
+}
+
+/* The chosen option of a group used as a segmented control. */
+.button-group .button:is(.active, [aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
 }
 
 /* ============================================

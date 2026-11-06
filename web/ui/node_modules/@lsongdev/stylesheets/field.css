@@ -2,7 +2,6 @@
 
 /*
  * A labelled form control, with an optional hint or error below it.
- * Opt-in: not part of index.css.
  *
  * <label class="field">
  *   <span class="field-label">Name<span class="field-required">*</span></span>

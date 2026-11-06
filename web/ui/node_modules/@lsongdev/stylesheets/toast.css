@@ -3,7 +3,6 @@
 /*
  * Short messages stacked in a corner. The container may be a manual
  * popover so it shows above modal dialogs.
- * Opt-in: not part of index.css.
  *
  * <div class="toasts" popover="manual" aria-live="polite">
  *   <div class="toast toast-success">Saved</div>

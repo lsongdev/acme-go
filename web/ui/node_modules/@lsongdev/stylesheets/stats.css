@@ -19,13 +19,19 @@
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: var(--stat-value-size, 1.5rem);
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text);
 }
 
 .stat-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* A secondary line under the value: a unit, a comparison or a source. */
+.stat-hint {
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }

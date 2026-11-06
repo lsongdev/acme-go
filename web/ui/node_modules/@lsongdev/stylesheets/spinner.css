@@ -2,7 +2,6 @@
 
 /*
  * A small spinning ring, and a centred loading message using it.
- * Opt-in: not part of index.css.
  *
  * <div class="loading" aria-busy="true"><span class="spinner"></span>Loading…</div>
  */

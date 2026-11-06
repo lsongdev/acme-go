@@ -1,0 +1,83 @@
+@import url(./base.css);
+
+/*
+ * Page links or buttons: previous, numbered pages with gaps, next, and an
+ * optional field to jump to a page. Mark the current page with
+ * aria-current="page".
+ *
+ * <nav class="pagination" aria-label="Pagination">
+ *   <button class="pagination-item">‹</button>
+ *   <button class="pagination-item" aria-current="page">1</button>
+ *   <span class="pagination-gap">…</span>
+ *   <button class="pagination-item">9</button>
+ *   <label class="pagination-jump">Go to <input class="input"></label>
+ * </nav>
+ */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.pagination-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 8px;
+  border: 1px solid var(--pagination-border, var(--color-border));
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination-item:hover:not(:disabled, [aria-current="page"]) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pagination-item[aria-current="page"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: default;
+}
+
+.pagination-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pagination-gap,
+.pagination-status {
+  padding: 0 4px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pagination-jump .input {
+  width: 4.5em;
+  height: 2rem;
+  padding-block: 0;
+}
