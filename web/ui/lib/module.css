@@ -5,6 +5,7 @@
    links it from its index.html. Theme tokens come from the hosting document. */
 @import url(../node_modules/@lsongdev/stylesheets/base.css);
 @import url(../node_modules/@lsongdev/stylesheets/card.css);
+@import url(../node_modules/@lsongdev/stylesheets/form.css);
 @import url(../node_modules/@lsongdev/stylesheets/input.css);
 @import url(../node_modules/@lsongdev/stylesheets/button.css);
 @import url(../node_modules/@lsongdev/stylesheets/table.css);

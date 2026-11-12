@@ -64,7 +64,7 @@ export default function NewCertificate() {
         <input type="checkbox" checked=${autoRenew} onChange=${e => setAutoRenew(e.currentTarget.checked)} />
         <span><strong>Auto-renew</strong><span class="field-hint">Issue again before expiry. With manual DNS-01, renewing still needs the records added by hand.</span></span>
       </label>
-      <div class="button-actions">
+      <div class="form-actions">
         <button class="button button-primary" type="submit" disabled=${busy || valid.length === 0 || list.length === 0}>
           ${busy ? 'Submitting…' : 'Issue'}
         </button>

@@ -49,7 +49,7 @@ function RegisterForm({ providers, onDone }) {
       <input type="checkbox" checked=${agree} onChange=${e => setAgree(e.currentTarget.checked)} required />
       <span>I agree to the <a href=${directory.terms_of_service} target="_blank" rel="noopener noreferrer">terms of service</a></span>
     </label>` : null}
-    <div class="button-actions">
+    <div class="form-actions">
       <button class="button button-primary" type="submit"
         disabled=${submit.busy || lookup.busy || !directory || directory.external_account_required || (needsTerms && !agree)}>
         ${submit.busy ? 'Registering…' : 'Register'}

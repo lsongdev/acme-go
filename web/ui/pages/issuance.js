@@ -39,7 +39,7 @@ function DNSRecords({ issuance, onContinue, busy }) {
       </tr>`)}</tbody>
     <//>
     ${waiting ? html`
-      <div class="button-actions" style="margin-top:12px">
+      <div class="row-actions" style="margin-top:12px">
         <button class="button button-primary" disabled=${busy} onClick=${() => onContinue(false)}>Continue</button>
         <button class="button" disabled=${busy} onClick=${() => onContinue(true)}
           title="Ask the CA to validate without first checking the records through public DNS">Skip the check</button>

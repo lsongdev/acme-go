@@ -3,7 +3,7 @@
   "private": true,
   "description": "Browser dependencies of this UI. node_modules is committed (npm ci output) so the Go module embeds it; make check-deps verifies it matches the lockfile.",
   "dependencies": {
-    "@lsongdev/scripts": "git+https://github.com/lsongdev/scripts.git#729a40d5542e859c5286cdf8cd45ddaef6ae821c",
-    "@lsongdev/stylesheets": "git+https://github.com/lsongdev/stylesheets.git#bb442468470ffd3f8a3da733472f47b846de0202"
+    "@lsongdev/scripts": "git+https://github.com/lsongdev/scripts.git#6781191ce6794a30ccdcfd4195e5a164cd1e4dc9",
+    "@lsongdev/stylesheets": "git+https://github.com/lsongdev/stylesheets.git#a7c8bceca8f502eb638cdface4c5a7a2b2311823"
   }
 }
